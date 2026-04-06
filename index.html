@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kahf Guard: Fact-Check Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f3f4f6;
+            --paper: #ffffff;
+            --ink: #111827;
+            --ink-muted: #4b5563;
+            --ink-light: #6b7280;
+            --border: #e5e7eb;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-bg: #eff6ff;
+            
+            /* Verdict Colors */
+            --true-bg: #f0fdf4;
+            --true-text: #166534;
+            --true-border: #bbf7d0;
+            
+            --false-bg: #fef2f2;
+            --false-text: #991b1b;
+            --false-border: #fecaca;
+            
+            --partial-bg: #fffbeb;
+            --partial-text: #92400e;
+            --partial-border: #fde68a;
+            
+            --mislead-bg: #fff7ed;
+            --mislead-text: #9a3412;
+            --mislead-border: #fed7aa;
+            
+            --unverif-bg: #f5f3ff;
+            --unverif-text: #5b21b6;
+            --unverif-border: #ddd6fe;
+
+            --font-en: 'Inter', system-ui, sans-serif;
+            --font-bn: 'Hind Siliguri', sans-serif;
+            --font-code: 'Fira Code', monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--ink);
+            font-family: var(--font-en);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body.lang-bn {
+            font-family: var(--font-bn);
+            font-size: 1.1rem;
+        }
+
+        /* Top Bar & Navigation */
+        .topbar {
+            position: sticky;
+            top: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: var(--ink-muted);
+            font-weight: 600;
+        }
+
+        .badge .dot {
+            width: 8px; height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+        /* Language Toggle Switch */
+        .lang-switch {
+            display: flex;
+            background: var(--bg);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--ink-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .lang-btn.active {
+            background: var(--paper);
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* Main Content Area */
+        .container {
+            max-width: 860px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .report-card {
+            background: var(--paper);
+            border-radius: 12px;
+            padding: 50px 60px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border);
+        }
+
+        /* Typography */
+        h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 24px; color: var(--ink); line-height: 1.2; }
+        h2 { font-size: 1.5rem; font-weight: 700; margin: 48px 0 20px; padding-bottom: 12px; border-bottom: 2px solid var(--border); }
+        h3 { font-size: 1.2rem; font-weight: 700; margin: 32px 0 16px; color: var(--primary); }
+        h4 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 12px; }
+        
+        p { margin-bottom: 16px; color: var(--ink-muted); }
+        
+        ul, ol { margin-bottom: 16px; padding-left: 24px; color: var(--ink-muted); }
+        li { margin-bottom: 8px; }
+
+        strong { color: var(--ink); font-weight: 600; }
+        em { color: var(--ink-muted); }
+
+        /* Blockquotes */
+        blockquote {
+            border-left: 4px solid var(--primary);
+            background: var(--primary-bg);
+            padding: 16px 20px;
+            margin: 24px 0;
+            border-radius: 0 8px 8px 0;
+            color: var(--primary-hover);
+        }
+        blockquote p { color: inherit; margin-bottom: 0; }
+        blockquote strong { color: var(--primary-hover); }
+
+        /* Code & Pre */
+        code {
+            font-family: var(--font-code);
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #db2777;
+            border: 1px solid var(--border);
+        }
+
+        pre.code-block {
+            background: #1f2937;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 16px 0;
+            border: 1px solid #374151;
+        }
+        pre.code-block code {
+            background: none; border: none; color: #e5e7eb; padding: 0; font-size: 0.85rem;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 24px 0;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        th { background: #f9fafb; padding: 12px 16px; font-weight: 600; color: var(--ink); border-bottom: 1px solid var(--border); }
+        td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--ink-muted); }
+        tr:last-child td { border-bottom: none; }
+        
+        /* Verdict Badges */
+        .verdict {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .v-true { background: var(--true-bg); color: var(--true-text); border-color: var(--true-border); }
+        .v-false { background: var(--false-bg); color: var(--false-text); border-color: var(--false-border); }
+        .v-partial { background: var(--partial-bg); color: var(--partial-text); border-color: var(--partial-border); }
+        .v-mislead { background: var(--mislead-bg); color: var(--mislead-text); border-color: var(--mislead-border); }
+        .v-unverif { background: var(--unverif-bg); color: var(--unverif-text); border-color: var(--unverif-border); }
+
+        /* Meta Info Block */
+        .meta-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+        }
+        .meta-box p { margin-bottom: 6px; }
+        .meta-box p:last-child { margin-bottom: 0; }
+
+        /* Hide content based on language */
+        .lang-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .lang-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+        .disclaimer { font-style: italic; font-size: 0.9rem; color: var(--ink-light); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .report-card { padding: 30px 20px; }
+            h1 { font-size: 1.8rem; }
+            .topbar { padding: 12px; }
+            .badge span:not(.dot) { display: none; } /* Show only dot on small mobile */
+            .badge::after { content: "v4.6.188"; font-family: var(--font-code); color: var(--ink-muted); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <div class="badge">
+            <div class="dot"></div>
+            <span>Kahf Guard Fact-Check</span>
+        </div>
+        <div class="lang-switch">
+            <button class="lang-btn active" onclick="setLang('en')" id="btn-en">English</button>
+            <button class="lang-btn" onclick="setLang('bn')" id="btn-bn">বাংলা</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="report-card">
+            
+            <!-- ENGLISH CONTENT -->
+            <div id="content-en" class="lang-content active">
+                <h1>Final Fact-Check Report: Kahf Guard APK v4.6.188</h1>
+                
+                <div class="meta-box">
+                    <p><strong>Date:</strong> 2026-04-06</p>
+                    <p><strong>Build:</strong> <code>com.kahf.dns</code> v4.6.188 (APKPure XAPK)</p>
+                    <p><strong>Toolchain:</strong> JADX 1.5.5 (standard mode + <code>--show-bad-code</code> for stubbed methods)</p>
+                    <p><strong>Scope:</strong> Static analysis only. Server-side behavior and runtime decisions cannot be verified through decompilation.</p>
+                    <p><strong>Sources cross-referenced:</strong> Viral Facebook post (which analyzed v4.6.186), CEO public statement, Kahf Guard privacy policy (effective 2024-12-04), kahfguard.com website, decompiled source code.</p>
+                </div>
+
+                <blockquote>
+                    <p><strong>Important note on file paths and line numbers:</strong> The viral post analyzed APK v4.6.186, while this report analyzes v4.6.188. Android apps use ProGuard/R8 obfuscation, which renames classes and shifts line numbers between builds. Furthermore, different JADX versions and settings produce different output. Throughout this report, where we state that a specific file path from the viral post was "not found," this means <strong>not found in our specific decompilation of v4.6.188</strong> — the underlying functionality may exist at different paths. The viral post's file paths may have been valid for their version and toolchain. We have independently verified the presence or absence of each claimed <em>behavior</em>, regardless of file paths.</p>
+                </blockquote>
+
+                <h2>Executive Summary</h2>
+                <p>A viral Facebook post accused Kahf Guard of being a "remote-controlled trojan" that "sells user data to Facebook" and conducts "extreme surveillance." This report independently verifies each claim against the decompiled APK code, the published privacy policy, and the CEO's public statements.</p>
+                <p><strong>Understanding the product context:</strong> Kahf Guard is primarily a content-blocking and digital wellbeing app designed to help users avoid haram content on the internet. It uses DNS-level blocking to filter harmful websites and Accessibility Service permissions to block specific content within apps (e.g., Reels, Shorts, adult content in browsers). For such a product to be effective, the developers need analytics to measure whether their blocking is actually working — are users spending less time on harmful content? Are the filters effective? Which features are most used? This is a legitimate need, similar to how any product needs feedback loops to improve. The question is not whether analytics should exist, but whether the <em>specific analytics choices</em> are proportionate and properly disclosed.</p>
+                
+                <p><strong>Key findings:</strong></p>
+                <ul>
+                    <li>Several core allegations have merit — the app does integrate Facebook SDK with advertiser tracking enabled, uses PostHog analytics with session replay infrastructure, and syncs installed apps and usage data to servers periodically and on-demand.</li>
+                    <li>Several claims are factually wrong or exaggerated — wrong product names, inflated numbers, and misunderstanding of standard Android development patterns.</li>
+                    <li>The CEO's marketing language ("zero surveillance," "never sell data," "no data collection") is contradicted by the code and even Kahf's own privacy policy. A more accurate framing would have been: <em>"We collect analytics to improve our blocking effectiveness and measure product goals."</em></li>
+                    <li>Much of what the viral post calls "surveillance" is actually the standard mechanism by which content-blocking and parental-control apps function on Android.</li>
+                </ul>
+
+                <h2>Claim-by-Claim Fact-Check</h2>
+
+                <h3>Claim 1: "Facebook SDK Sends Data to Meta / Sold Users to Facebook"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>Facebook SDK present?</td><td><span class="verdict v-true">TRUE</span> — Confirmed in <code>KahfGuardApp.m4516b()</code></td></tr>
+                        <tr><td>AdvertiserID enabled?</td><td><span class="verdict v-true">TRUE</span> — <code>com.facebook.sdk.AdvertiserIDCollectionEnabled = true</code></td></tr>
+                        <tr><td>AutoLogEvents enabled?</td><td><span class="verdict v-true">TRUE</span> — <code>com.facebook.sdk.AutoLogAppEventsEnabled = true</code></td></tr>
+                        <tr><td>Advanced Matching infrastructure present?</td><td><span class="verdict v-partial">TRUE (but passive)</span> — Facebook SDK's <code>UserDataStore</code> code exists in <code>ec/C3439k.java</code> with fields for <code>email</code>, <code>first_name</code>, <code>last_name</code>, <code>phone</code>. However, <strong>Kahf Guard's own code does NOT actively call</strong> <code>setUserData()</code>, <code>setUserEmail()</code>, etc. Zero calls to these methods were found in the <code>com/kahf/dns/</code> package. The UserDataStore code is <strong>latent SDK library code</strong> that ships with every Facebook SDK integration, not something the app actively uses to push PII to Meta.</td></tr>
+                        <tr><td>"Sold to Facebook"?</td><td><span class="verdict v-false">FALSE</span> — SDK telemetry for ad attribution is not a direct data sale. Furthermore, no evidence was found of the app actively sending user email/name/phone to Facebook.</td></tr>
+                        <tr><td>File path <code>hg/l0.java</code> lines 97-109?</td><td><span class="verdict v-unverif">Not found</span> — Not found in our v4.6.188 decompilation. May have existed in v4.6.186. The corresponding SDK code is in <code>ec/C3439k.java</code> in our build.</td></tr>
+                    </table>
+                </div>
+                <p><strong>What Facebook SDK actually collects in this integration:</strong> With AdvertiserID and AutoLogEvents enabled, the SDK automatically collects: Google Advertising ID (GAID), app install/launch events, device metadata (OS, model, carrier, etc.). These are standard SDK auto-events. The Advanced Matching feature (which could send email/name/phone) exists as library code but is <strong>not actively invoked</strong> by Kahf Guard's application code — the data fields for email, name, and phone that users provide during account creation are stored in Kahf's own SharedPreferences, not passed to Facebook's <code>UserDataStore</code>.</p>
+                <p><strong>Standard practice context:</strong> Facebook SDK / Meta SDK is used by millions of apps for install attribution and ad campaign measurement. Its presence is standard industry practice.</p>
+                <p><strong>Is Kahf Guard a "privacy app"?</strong> The website markets Kahf Guard as a content-blocking and digital wellbeing app... The app is <strong>not primarily marketed as an anti-Big-Tech-tracking tool</strong>. It's a haram content blocker and parental control app. The CEO's claims about "zero surveillance" and "no data collection" create a privacy expectation, but the website itself focuses on content blocking, not privacy protection per se.</p>
+                <p><strong>Privacy policy disclosure:</strong> The privacy policy <strong>does</strong> list "Facebook Analytics" under Third Party Access. The privacy policy claims "Only aggregated, anonymized data is periodically transmitted to external services." Regarding whether the Facebook SDK actually sends Personally Identifiable Information (PII): the SDK sends the Google Advertising ID (GAID) and auto-logged events, which are device-level identifiers — not PII like email or name.</p>
+
+                <h3>Claim 2: "Reads URL Bars from 17 Browsers"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>Reads browser URLs?</td><td><span class="verdict v-true">TRUE</span> — <code>KahfBlockerService</code> uses Android Accessibility Service</td></tr>
+                        <tr><td>17 browsers?</td><td><span class="verdict v-partial">CLOSE</span> — Actually <strong>18</strong> browser package IDs in the code</td></tr>
+                        <tr><td>File path <code>ei/a.java</code> lines 24/287?</td><td><span class="verdict v-unverif">Not found</span> — Not found in our v4.6.188 decompilation. Actual code is in <code>KahfBlockerService.java</code> (line 81 area) in our build.</td></tr>
+                    </table>
+                </div>
+                <p><strong>The 18 monitored browsers:</strong> Chrome, Chrome Dev, Firefox, Firefox Rocket, Samsung Browser, Opera, Opera Mini, Microsoft Edge, Brave, DuckDuckGo, Vivaldi, Tor Browser, Spin Browser, Ecosia, Free Adblocker Browser, IDM Browser, Cast Web Video Browser, Kahf Browser.</p>
+                <p><strong>Standard practice context:</strong> This is how ALL Android content blockers that need URL-level filtering work. DNS-level blocking cannot see HTTPS paths. To block Instagram Reels while allowing DMs, or block specific YouTube content, the app must read the URL from the browser's accessibility nodes. This is the necessary mechanism, not evidence of surveillance.</p>
+
+                <h3>Claim 3: "ALLOWLISTED_SIG = Backdoor / evaluateJavascript = Remote Code Execution"</h3>
+                <h4>ALLOWLISTED_SIG</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>Secondary signature exists?</td><td><span class="verdict v-true">TRUE</span> — <code>ALLOWLISTED_SIG = "Vn3kj4p..."</code> in <code>com.pairip.SignatureCheck</code></td></tr>
+                        <tr><td>"Anyone can sign malware with it"?</td><td><span class="verdict v-false">FALSE</span> — Only the holder of the corresponding private key can produce a matching signature</td></tr>
+                        <tr><td>Is this a backdoor?</td><td><span class="verdict v-false">FALSE</span> — Standard dual-signing pattern for multi-channel distribution (Play Store, direct APK, etc.)</td></tr>
+                    </table>
+                </div>
+                <p><strong>Standard practice context:</strong> PairIP is a legitimate anti-piracy/anti-tamper library used by many Android apps. Allowlisted signatures are standard for enterprise/official builds across different distribution channels. This is not a security vulnerability.</p>
+
+                <h4>evaluateJavascript</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>evaluateJavascript used?</td><td><span class="verdict v-true">TRUE</span> — In <code>p176hl/C5181p.java</code> and <code>p000/C12905z0.java</code></td></tr>
+                        <tr><td>Remote server pushes arbitrary JS?</td><td><span class="verdict v-unverif">NOT PROVEN</span> — The JavaScript strings come from the app's internal state machine, not directly from a remote endpoint</td></tr>
+                        <tr><td>File path <code>bl/r.java</code> lines 56-63?</td><td><span class="verdict v-unverif">Not found</span> — Not found in our v4.6.188 decompilation.</td></tr>
+                    </table>
+                </div>
+                <p><strong>Standard practice context:</strong> <code>evaluateJavascript()</code> is the standard Android API for injecting JavaScript into WebViews. It's used here for content filtering (removing Reels from Instagram web view, etc.). The injected JS is app-defined, not server-pushed. All apps that use WebViews for content modification use this API. This is not a backdoor.</p>
+
+                <h3>Claim 4: "12 System Events Restart Tracking"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>Multiple system events monitored?</td><td><span class="verdict v-true">TRUE</span></td></tr>
+                        <tr><td>12 events?</td><td><span class="verdict v-true">TRUE</span> — Combined across <code>HeartbeatReceiver</code> and <code>SystemEventReceiver</code></td></tr>
+                        <tr><td>Purpose is surveillance?</td><td><span class="verdict v-mislead">MISLEADING</span> — Purpose is to keep the blocking service alive</td></tr>
+                    </table>
+                </div>
+                <p><strong>12 events confirmed:</strong> <code>BOOT_COMPLETED</code>, <code>LOCKED_BOOT_COMPLETED</code>, <code>MY_PACKAGE_REPLACED</code>, <code>DATE_CHANGED</code>, <code>ACTION_POWER_CONNECTED</code>, <code>ACTION_POWER_DISCONNECTED</code>, <code>USER_PRESENT</code>, <code>TIME_SET</code>, <code>TIMEZONE_CHANGED</code>, <code>PACKAGE_REPLACED</code>, <code>SCREEN_ON</code>, <code>BATTERY_OKAY</code></p>
+                <p><strong>Standard practice context:</strong> Any Android service that must run persistently (content blockers, parental controls, VPNs, fitness trackers) needs to restart after system events. If the blocking service dies, the user loses protection. This is a standard and necessary pattern, not evidence of surveillance.</p>
+
+                <h3>Claim 5: "Terrifying Surveillance — WhatsApp/Telegram/Instagram"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>Social apps monitored?</td><td><span class="verdict v-true">TRUE</span> — 14 social apps total</td></tr>
+                        <tr><td>WhatsApp chat list tracking?</td><td><span class="verdict v-mislead">MISLEADING</span> — The app monitors <strong>which tab/screen</strong> the user is on (e.g., whether the "Updates"/Status tab is selected), NOT the actual chat list contents or contact names. It reads accessibility node IDs like <code>com.whatsapp:id/navigation_bar_item_large_label_view</code> to detect tab labels ("Updates") and <code>com.whatsapp:id/updates_list</code> for the Status container. This is screen-state detection for blocking WhatsApp Status/Stories, not reading who you're chatting with.</td></tr>
+                        <tr><td>Telegram text reading?</td><td><span class="verdict v-true">TRUE</span> — Reads accessibility nodes for content/word detection (for "risky word" blocking feature)</td></tr>
+                        <tr><td>Instagram monitoring?</td><td><span class="verdict v-true">TRUE</span> — Monitors for Reels blocking via node IDs like <code>reel_recycler</code>, <code>clips_viewer_view_pager</code></td></tr>
+                        <tr><td>All installed apps sent to server?</td><td><span class="verdict v-true">TRUE</span> — <code>GetChildDevicesQuery</code> includes <code>installedApps { packageName, appName, isSystemApp }</code></td></tr>
+                        <tr><td>File path <code>xg/o0.java</code> line 18?</td><td><span class="verdict v-unverif">Not found</span> — actual file is <code>p081dh/C3057o0.java</code> in our build</td></tr>
+                    </table>
+                </div>
+                <p><strong>Core set (6 apps):</strong> YouTube, Instagram, Facebook, Telegram, WhatsApp, WhatsApp Business<br>
+                <strong>Extended set (8 apps):</strong> Twitter/X, TikTok, Snapchat, Reddit, Threads, Pinterest, Discord, Tumblr</p>
+                <p><strong>Standard practice context:</strong> Content-blocking / parental-control apps MUST monitor app screens to implement blocking features. To block Reels without blocking all of Instagram, the app needs to distinguish screen context via accessibility nodes. This is how Screen Time, Google Family Link, and similar products work. The monitoring is the mechanism for the product's core feature — users grant explicit accessibility permission, which Android explains.</p>
+                <p><strong>Why installed app list and usage data sync is legitimate for ALL users (not just parental control):</strong> Kahf Guard was originally built as a personal accountability tool before parental control was added later. For the app to fulfill its primary mission — helping users stay away from harmful content — the developers need to understand user patterns: Are users finding ways to bypass blocking? Which apps are users gravitating toward? Is the app actually reducing time on problematic apps? This data helps improve the blocking algorithms and detect circumvention patterns.</p>
+                <p><strong>That said,</strong> it would be better practice to clearly disclose this in the privacy policy and give users granular control over what data is synced.</p>
+
+                <h3>Claim 6: "FCM Silent Push = Trojan / Remote Data Upload"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>Server can silently trigger data sync?</td><td><span class="verdict v-true">TRUE</span> — FCM data messages with "Silent sync message, no notification displayed"</td></tr>
+                        <tr><td>Installed apps sync triggered?</td><td><span class="verdict v-true">TRUE</span> — <code>installed_apps_sync</code> enqueues <code>InstalledAppsSyncWorker</code></td></tr>
+                        <tr><td>App usage sync triggered?</td><td><span class="verdict v-true">TRUE</span> — <code>app_usage_sync</code> enqueues <code>AppUsageSyncWorker</code></td></tr>
+                        <tr><td>Is it a "trojan"?</td><td><span class="verdict v-false">FALSE</span> — These are parental control infrastructure, not malware</td></tr>
+                        <tr><td>File path lines 1580/1663?</td><td><span class="verdict v-unverif">CANNOT VERIFY</span> — The <code>onMessageReceived</code> method (2344 instruction units) did not fully decompile; <code>--show-bad-code</code> output is fragmented</td></tr>
+                    </table>
+                </div>
+                <p><strong>6 confirmed FCM message types:</strong> <code>restriction_update</code>, <code>permission_sync</code>, <code>metadata_update</code>, DNS sync, <code>installed_apps_sync</code>, <code>app_usage_sync</code>, <code>supervision_update</code></p>
+                <p><strong>Standard practice context:</strong> Silent FCM pushes for parental control sync are used by Google Family Link, Qustodio, Bark, and similar products. Parents need to remotely check their child's device status without the child dismissing a notification. This is standard parental control architecture.</p>
+                <p><strong>Legitimate concern:</strong> The same mechanism that allows a parent to check their child's device also allows Kahf's server to request data from ANY user's device silently. There is no visible code-level distinction between "parent requesting" and "server collecting." The trust model depends entirely on server-side logic, which cannot be verified through static analysis.</p>
+
+                <h3>Claim 7: "UUID Persists After Uninstall via backup_rules.xml / 11 IP Lookup Services"</h3>
+                <h4>UUID Backup</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>UUID backed up to Google Cloud?</td><td><span class="verdict v-partial">PARTIALLY TRUE</span> — <code>backup_rules.xml</code> backs up <code>user_prefs.xml</code> and <code>device_data/</code></td></tr>
+                        <tr><td>"Forever tracking"?</td><td><span class="verdict v-false">FALSE</span> — Standard Android Auto Backup; not a tracking mechanism</td></tr>
+                    </table>
+                </div>
+                <p><strong>Standard practice context:</strong> This is standard Android Auto Backup — a convenience feature so that if a user loses their phone or switches devices, their app settings are automatically restored when they reinstall. Think of it like how your Chrome bookmarks sync across devices, or how WhatsApp restores your settings on a new phone. Thousands of apps use this. The user doesn't have to reconfigure everything from scratch. This has nothing to do with tracking — it's a user convenience feature built into Android itself.</p>
+
+                <h4>IP Lookup Services</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>11 third-party IP services?</td><td><span class="verdict v-partial">PARTIALLY TRUE</span> — In our analysis, we found <strong>6 geolocation services</strong> + <strong>7 IP-retrieval endpoints</strong> = 13 total IP-related endpoints. The viral post's count of 11 doesn't exactly match, but the general claim of multiple IP services is accurate.</td></tr>
+                        <tr><td>Plain HTTP service?</td><td><span class="verdict v-true">TRUE</span> — <code>http://ip-api.com/json/{ip}</code> (no TLS) is used as Fallback #3</td></tr>
+                    </table>
+                </div>
+                <p><strong>6 geolocation services (fallback chain in <code>p000/C11771x0.java</code>):</strong><br>
+                1. <code>https://api.ipify.org</code> (IP retrieval)<br>
+                2. <code>https://api.bigdatacloud.net/data/ip-geolocation?ip=</code> (Fallback #1)<br>
+                3. <code>https://freeipapi.com/api/json/</code> (Fallback #2)<br>
+                4. <strong><code>http://ip-api.com/json/</code></strong> (Fallback #3 — <strong>PLAIN HTTP</strong>)<br>
+                5. <code>https://ipapi.co/{ip}/country_name/</code> (Fallback #4)<br>
+                6. <code>https://ipinfo.io/{ip}/json</code> (Final fallback)</p>
+                <p><strong>7 additional IP-retrieval endpoints (in <code>sg/C9792j.java</code>):</strong><br>
+                <code>api.ipify.org</code>, <code>api.myip.com</code>, <code>checkip.amazonaws.com</code>, <code>api.ip.sb/ip</code>, <code>icanhazip.com</code>, <code>ipecho.net/plain</code>, <code>ipinfo.io/ip</code> (all HTTPS)</p>
+                <p><strong>Standard practice context:</strong> Using multiple IP geolocation services as fallbacks is common for apps that need country detection (for DNS server selection, pricing, language defaults). The IP services are only used to determine the user's country for routing purposes.</p>
+                <p><strong>On the plain HTTP service (<code>ip-api.com</code>):</strong> The viral post flags this as a security vulnerability. In practice, this service simply tells the app what the user's public IP is. Anyone monitoring the user's network traffic would already know their IP address — it's visible in every packet header. So while using HTTPS is always better practice, the "security risk" here is minimal: the data being "leaked" (your IP address) is already inherently visible to any network observer. The free tier of <code>ip-api.com</code> does not support HTTPS, which is why developers use it over HTTP. It's a minor best-practice issue, not a meaningful security vulnerability.</p>
+
+                <h3>Claim 8: "BootReceiver Uses VMRunner — Hidden Code"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>VMRunner.invoke used at boot?</td><td><span class="verdict v-true">TRUE</span> — <code>BootReceiver.onReceive()</code> calls <code>VMRunner.invoke("WYWlOOlYRm2t3AHk", ...)</code></td></tr>
+                        <tr><td>Encrypted/obfuscated code?</td><td><span class="verdict v-true">TRUE</span> — VMRunner loads bytecode from the PairIP native library (<code>libpairipcore.so</code>)</td></tr>
+                        <tr><td>"Can't analyze what it does"?</td><td><span class="verdict v-partial">PARTIALLY TRUE</span> — Static analysis alone cannot determine what runs in the VM; dynamic analysis (instrumentation) would be needed</td></tr>
+                    </table>
+                </div>
+                <p><strong>Standard practice context:</strong> PairIP is a commercial anti-piracy/anti-tamper solution used by many Android apps to protect against cracking and redistribution. It's common for boot-initialization code to be protected this way. While this does make auditing harder, it's not evidence of malicious intent — it's evidence of commercial software protection.</p>
+
+                <h3>Claim 9: "OpenReplay Records Every Tap/Swipe/Keystroke"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Aspect</th><th>Verdict</th></tr>
+                        <tr><td>OpenReplay present in our build?</td><td><span class="verdict v-unverif">NOT FOUND</span> — No OpenReplay integration found in our decompilation</td></tr>
+                        <tr><td><code>openreplay.kahf.co.uk</code> endpoint?</td><td><span class="verdict v-partial">ENDPOINT IS LIVE</span> — While not present in our v4.6.188 build code, the domain <code>openreplay.kahf.co.uk</code> resolves to a live web application. This confirms the viral post author likely found it in their v4.6.186 build, and the endpoint still exists on Kahf's infrastructure. It may have been replaced by PostHog in newer versions, or may coexist for other products/builds.</td></tr>
+                        <tr><td>Session replay exists in current build?</td><td><span class="verdict v-true">TRUE</span> — <strong>PostHog</strong> (not OpenReplay) with session replay infrastructure at <code>https://p.kahf.co.uk</code></td></tr>
+                        <tr><td>Can capture taps/swipes/keystrokes?</td><td><span class="verdict v-true">TRUE</span> (of Kahf Guard's own screens only) — PostHog replay includes <code>RRMouseInteraction</code>, <code>RRFullSnapshotEvent</code>, keyboard events</td></tr>
+                        <tr><td>File path <code>com/openreplay/tracker/listeners/Analytics.java</code>?</td><td><span class="verdict v-unverif">Not found</span> — may have existed in the viral post author's v4.6.186 build</td></tr>
+                    </table>
+                </div>
+                <p><strong>PostHog configuration:</strong><br>
+                - API Key: <code>phc_OmqCNJqYWGInDc1b3GQEGWDnPPIV6etPJ1bO7pLRL8N</code><br>
+                - Session replay: <strong>enabled</strong> in client config<br>
+                - <code>captureLogcat</code>: <strong>NOT hardcoded as enabled</strong> — controlled by server-side PostHog config (<code>consoleLogRecordingEnabled</code>), defaults to <code>false</code><br>
+                - Default masking: text inputs masked, images masked, passwords always masked</p>
+                <p><strong>Critical scope clarification:</strong> PostHog session replay can only capture <strong>Kahf Guard's own app screens</strong> (settings, onboarding, dashboard). It <strong>CANNOT</strong> see your activity in Chrome, WhatsApp, Instagram, or any other app. Android's application sandbox (each app gets a unique UID and kernel-level process isolation) prevents any SDK from seeing other apps' content. The viral post's implication that session replay records "everything you type" across all apps is <strong>technically impossible on Android</strong> — this is a fundamental misunderstanding of how mobile operating systems work.</p>
+                <p><strong>Is session replay within the app concerning?</strong> Realistically, Kahf Guard's own screens contain only settings toggles (enable/disable blocking, configure filters, etc.) and dashboard views. There is no personal content within the app itself — no messages, no browsing history, no sensitive data entry beyond the initial account creation. Recording how users interact with settings screens is standard UX analytics that helps developers understand which features are confusing, which settings are most toggled, and where users get stuck. Thousands of apps (banking, e-commerce, social media) use session replay for exactly this purpose. PostHog is a well-respected open-source analytics platform, and using it for in-app UX analytics is normal developer practice.</p>
+                <p><strong>However:</strong> PostHog is <strong>NOT disclosed</strong> in the privacy policy. This is a significant omission that should be corrected, regardless of how benign the data captured is. Transparency is important.</p>
+
+                <h3>Claim 10: "CEO's Blatant Lies"</h3>
+                <p>The viral post directly challenges specific CEO statements. Here's the fact-check:</p>
+                
+                <h4>CEO Claim: "We never sell your data. Ever."</h4>
+                <div class="table-wrapper">
+                    <table><tr><th>Verdict</th><td><span class="verdict v-partial">Likely true in the literal sense</span></td></tr></table>
+                </div>
+                <p>"Sell" implies a direct commercial transaction. There is no evidence that Kahf receives payment from Meta for user data. The Facebook SDK sends device-level advertising identifiers (GAID) and auto-logged events for ad attribution, but <strong>the app does not actively push PII (email, name, phone) to Facebook</strong>. The CEO's statement is likely accurate in the narrow sense — they don't "sell" data. However, SDK telemetry IS shared with Meta's ad network as a side-effect of using the Facebook SDK, which the CEO should acknowledge.</p>
+
+                <h4>CEO Claim: "We build with a zero-surveillance, privacy-first approach."</h4>
+                <div class="table-wrapper">
+                    <table><tr><th>Verdict</th><td><span class="verdict v-mislead">Needs clarification</span> — local monitoring is functional, not surveillance; server-side analytics could be better disclosed</td></tr></table>
+                </div>
+                <p>The app:<br>
+                - Monitors 18 browsers' URL bars via Accessibility Service<br>
+                - Reads accessibility nodes from 14 social apps<br>
+                - Syncs installed app lists every 6 hours<br>
+                - Syncs per-app usage data every 6 hours<br>
+                - Can be silently triggered via FCM to sync both immediately<br>
+                - Integrates Facebook SDK with advertiser tracking<br>
+                - Has PostHog session replay infrastructure (for its own screens)</p>
+                <p><strong>However, not all of this is "surveillance" in any meaningful sense.</strong> The local device monitoring (browser URLs, social app screens, installed apps detection) is the core mechanism by which content blocking and digital wellbeing features work. You cannot block Reels without knowing the user is looking at Reels. You cannot enforce screen time limits without tracking app usage. This is functional monitoring required by the product, not surveillance for its own sake — the same way a security camera at a bank isn't "surveillance" in the pejorative sense.</p>
+                <p><strong>Where the CEO's claim falls short:</strong> The analytics that go to external servers (Facebook SDK telemetry, PostHog analytics, periodic usage/app data syncs to Kahf's backend) are not "zero surveillance." A more honest framing would be: <em>"We collect analytics to measure our blocking effectiveness, improve the product, and help parents monitor children's devices. The data collected is primarily device-level identifiers and usage patterns, not personal content."</em> The CEO should have been transparent about this instead of using absolutes like "zero."</p>
+
+                <h4>CEO Claim: "We don't collect anything about what someone does on their phone."</h4>
+                <div class="table-wrapper">
+                    <table><tr><th>Verdict</th><td><span class="verdict v-false">Contradicted by the code and the privacy policy</span></td></tr></table>
+                </div>
+                <ul>
+                    <li><code>AppUsageSyncWorker</code> uploads per-app usage durations every 6 hours</li>
+                    <li><code>InstalledAppsSyncWorker</code> uploads the full app inventory every 6 hours</li>
+                    <li>The privacy policy itself discloses "The amount of time spent on the other Apps" and "App List & Screen-time"</li>
+                </ul>
+                <p>The CEO's own privacy policy contradicts this statement. However, an important nuance: the usage data is synced using a <strong>device ID</strong> (<code>deviceId</code>), not a user ID or email address. The GraphQL mutation <code>UpdateDeviceInstalledApps($deviceId: ID!, $apps: [InstalledAppInput!]!)</code> identifies data by device, not by person. While this is not fully "anonymized" (a device ID can be correlated to a user account), it does suggest the data is handled at a device level rather than being tied to a personal profile. The CEO should have said something like: <em>"We collect device-level usage data to measure blocking effectiveness and improve our product, as described in our privacy policy."</em></p>
+
+                <h4>CEO Claim: "If you want, you can decompile the app and verify the code."</h4>
+                <div class="table-wrapper">
+                    <table><tr><th>Verdict</th><td><span class="verdict v-true">Ironic but technically valid</span></td></tr></table>
+                </div>
+                <p>Credit where due — the app can be decompiled and analyzed. It's not completely locked down, and this entire analysis was possible. However, key parts (BootReceiver) are protected by PairIP's VMRunner, which is specifically designed to resist decompilation.</p>
+
+                <hr>
+
+                <h2>Privacy Policy Analysis</h2>
+                <p><strong>Policy effective date:</strong> 2024-12-04 (per website footer)</p>
+
+                <h3>What the privacy policy correctly discloses:</h3>
+                <ol>
+                    <li>Facebook Analytics — listed under Third Party Access</li>
+                    <li>Google Analytics for Firebase — listed</li>
+                    <li>Firebase Crashlytics — listed</li>
+                    <li>Google Play Services — listed</li>
+                    <li>Collection of: email/phone at sign-up, features used, public IP, time spent on other apps, child device app list & screen time, device configuration</li>
+                    <li>Third-party payment processors (Stripe, bKash)</li>
+                </ol>
+
+                <h3>What the privacy policy does NOT disclose:</h3>
+                <ol>
+                    <li><strong>PostHog analytics</strong> — the self-hosted instance at <code>p.kahf.co.uk</code> is never mentioned</li>
+                    <li><strong>Session replay capability</strong> — no mention of UI recording/interaction capture</li>
+                    <li><strong>FCM-triggered data collection</strong> — no mention that the server can silently request data uploads</li>
+                    <li><strong>Specific sync mechanisms</strong> — the 6-hour periodic workers for installed apps and usage are not described as such</li>
+                    <li><strong>Number of IP geolocation services</strong> — 6+ services used, including one plain HTTP endpoint, not mentioned</li>
+                </ol>
+
+                <h3>What the privacy policy claims that the code contradicts:</h3>
+                <ul>
+                    <li><strong>"Only aggregated, anonymized data is periodically transmitted to external services"</strong> — The Facebook SDK sends the Google Advertising ID (GAID), which is a device-level identifier (resettable, but still a unique identifier). Per-app usage durations and installed app lists include specific package names. Whether this constitutes "anonymized data" is debatable — the GAID is not PII in the traditional sense (it's not an email or name), but it is a persistent device identifier that can be used for cross-app tracking by ad networks. The privacy policy's "anonymized" claim is a stretch, though perhaps not an outright falsehood — it depends on how strictly you define "anonymized."</li>
+                </ul>
+
+                <h3>Privacy policy assessment:</h3>
+                <p>The policy is a <strong>reasonable framework</strong> — it does disclose the major third-party integrations (Facebook, Firebase) and the types of data collected. It does not try to claim zero data collection. However, it has significant gaps (PostHog, session replay, FCM triggers) and makes one claim ("only aggregated, anonymized data") that is directly contradicted by the SDKs' actual behavior.</p>
+
+                <hr>
+
+                <h2>Developer Logging — What's Exposed and Who Can See It</h2>
+                <p>Verified against both JADX outputs (<code>jadx_out</code> and <code>jadx_out_showbad</code>) in the <code>com.kahf.dns</code> package:</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Output</th><th>Log calls found</th><th>Unique source files</th></tr>
+                        <tr><td><code>jadx_out</code> (standard decompilation)</td><td><strong>150</strong></td><td><strong>20</strong></td></tr>
+                        <tr><td><code>jadx_out_showbad</code> (<code>--show-bad-code</code>)</td><td><strong>225</strong></td><td><strong>21</strong></td></tr>
+                    </table>
+                </div>
+
+                <p>The extra 75 calls in the <code>--show-bad-code</code> output come primarily from <code>AndroidNotificationService.java</code>, which was too large for the standard decompiler to fully reconstruct. The sensitive log lines discussed below are <strong>only visible in <code>jadx_out_showbad</code></strong> — they were not recoverable from standard JADX output.</p>
+
+                <h3>Can analytics SDKs read these device logs?</h3>
+                <ul>
+                    <li><strong>PostHog <code>captureLogcat</code></strong>: PostHog's Android SDK has an optional logcat capture mode. In Kahf Guard's decompiled code, <strong><code>captureLogcat</code> is NOT enabled</strong>. The default is <code>false</code>. These logs are NOT sent to PostHog.</li>
+                    <li><strong>Firebase Crashlytics</strong>: Only captures explicit developer breadcrumbs (<code>Crashlytics.log()</code>). It does <strong>not</strong> automatically read device logcat statements.</li>
+                    <li><strong>Facebook SDK</strong>: Has no logcat capture feature whatsoever.</li>
+                </ul>
+                <p><strong>Bottom line: Developer logs stay on the device</strong> and are not captured or transmitted by any analytics SDK in this build.</p>
+
+                <h3>Sensitivity breakdown of what the logs expose:</h3>
+                <p><strong>Low sensitivity (operational/debug):</strong><br>
+                - <code>AccessibilityMonitor</code> (<code>AccessibilityMonitorService.java</code>): logs service enable/disable transitions, grace period states, safety-net polling<br>
+                - <code>BlockOverlay</code> (<code>C2486o.java</code>, <code>C2488p.java</code>): overlay creation errors, animation failures — 40+ log calls<br>
+                - <code>BlockPauseManager</code> (<code>C2497u.java</code>): logs pause/unpause actions for blocked apps<br>
+                - <code>HeartbeatReceiver.java</code>: logs service restart attempts</p>
+
+                <p><strong>Medium sensitivity (configuration data):</strong><br>
+                - <code>KahfGuardApp.java</code>: "AndroidBillingManager initialized", "Failed to initialize billing/restriction/silence" — all from the <code>AutoSilencePro</code> tag<br>
+                - <code>RescheduleWorker.java</code>, <code>SilenceModeWorker.java</code>: prayer scheduling and silence mode logs</p>
+
+                <p><strong>Higher sensitivity — confirmed in <code>AndroidNotificationService.java</code> (jadx_out_showbad only):</strong></p>
+
+                <ul>
+                    <li>
+                        <strong>FCM token (truncated)</strong> — <code>AndroidNotificationService.java:436</code>:
+                        <pre class="code-block"><code>Log.d("KG_SYNC", "[FCM_TOKEN] New token generated: " + AbstractC10230n.m14287O0(20, token) + "...")</code></pre>
+                        Logs the <strong>first 20 characters</strong> of the Firebase Cloud Messaging registration token. The truncation helper (<code>m14287O0(20, ...)</code>) limits exposure, but a portion of a sensitive credential is still written to logcat.
+                    </li>
+                    <li>
+                        <strong>Full FCM message data payload</strong> — <code>AndroidNotificationService.java:554</code>:
+                        <pre class="code-block"><code>Log.d("SZ_NOTI", "Message received: data - " + remoteMessage.getData())</code></pre>
+                        Logs the <strong>complete key-value map</strong> of every incoming FCM push. This can include <code>notification_id</code>, <code>image_url</code>, <code>title</code>, <code>body</code>, <code>click_url</code>, <code>compose_screen</code>, and server-defined restriction/sync parameters.
+                    </li>
+                    <li>
+                        <strong>Notification click URLs</strong> — <code>AndroidNotificationService.java:332, 336</code>:
+                        <pre class="code-block"><code>Log.d("SZ_NOTI", "createPendingIntent: Received clickUrl = ".concat(str7))
+Log.d("SZ_NOTI", "createPendingIntent: Opening URL - ".concat(str7))</code></pre>
+                        Full URL from the FCM notification's <code>click_url</code> field is logged when building the pending intent.
+                    </li>
+                    <li>
+                        <strong>Authentication token from deep link</strong> — <code>MainActivity.java:387</code>:
+                        <pre class="code-block"><code>Log.d("Auth", "Got token from deep link: " + AbstractC10230n.m14287O0(10, strM10946a))</code></pre>
+                        Logs the <strong>first 10 characters</strong> of an authentication token received via deep link URL. Again truncated with the same <code>m14287O0</code> helper, but still partially exposed.
+                    </li>
+                </ul>
+
+                <h3>Risk assessment:</h3>
+                <p>These are <strong>developer debug logs left in a production build</strong> — a common but sloppy practice. The risk level depends on context:<br>
+                - <strong>On Android 4.1+</strong>: logcat is process-private — other installed apps cannot read these logs without special permissions.<br>
+                - <strong>Via ADB (USB debugging)</strong>: if debugging is enabled and the device is connected to a computer, all logs are readable by the connected machine.<br>
+                - <strong>Truncated token logging</strong> (20 chars for FCM token, 10 chars for auth token) is better than logging the full secret, but is still unnecessary exposure.<br>
+                - <strong>Full FCM payload logging</strong> is the most concerning item — it logs every server-originated command as plaintext, which would reveal restriction configurations, device IDs, and sync types to anyone with ADB access.</p>
+
+                <p>Important note: <strong>these logs are not visible in the standard <code>jadx_out</code> decompilation</strong> because <code>AndroidNotificationService.onMessageReceived()</code> is a 2344-instruction method that the standard decompiler stubbed out. They only became visible with <code>--show-bad-code</code>. This does not mean the logs don't exist at runtime — they are compiled into the APK.</p>
+
+                <p>These logs are not surveillance, but they represent developer negligence. A production release should strip debug <code>Log.d</code> calls out (via ProGuard rules) or at minimum avoid logging partial secrets and full server payloads.</p>
+
+                <hr>
+
+                <h2>The Analytics-vs-Surveillance Spectrum</h2>
+
+                <h3>What is standard and necessary for this product category:</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Capability</th><th>Why it's needed</th><th>Industry comparison</th></tr>
+                        <tr><td>Browser URL monitoring via Accessibility</td><td>DNS can't see HTTPS paths</td><td>All Android content blockers (NetGuard, AdGuard, etc.)</td></tr>
+                        <tr><td>Social app screen monitoring</td><td>Block Reels/Shorts/Status specifically</td><td>Bark, Qustodio, Google Family Link</td></tr>
+                        <tr><td>Installed app list (child devices)</td><td>Parents need to see what kids install</td><td>Google Family Link, Apple Screen Time</td></tr>
+                        <tr><td>Usage duration tracking</td><td>Measure if blocking is effective</td><td>Screen Time, Digital Wellbeing</td></tr>
+                        <tr><td>Firebase Analytics + Crashlytics</td><td>Standard crash reporting and usage metrics</td><td>Used by ~80% of Android apps</td></tr>
+                        <tr><td>Boot/system event receivers</td><td>Keep blocking service alive across reboots</td><td>All persistent services</td></tr>
+                        <tr><td>FCM silent sync (parental control)</td><td>Parents remotely check child devices</td><td>Google Family Link uses similar patterns</td></tr>
+                    </table>
+                </div>
+
+                <h3>What goes beyond blocking necessity:</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Capability</th><th>Blocking need?</th><th>Present?</th><th>Concern level</th></tr>
+                        <tr><td>Facebook SDK with AdvertiserID</td><td><strong>Not needed for blocking</strong></td><td>Yes</td><td>MEDIUM — Not needed for blocking functionality; the CEO claims no data is collected, yet SDK telemetry flows to Meta's ad network. The app is not primarily marketed as a privacy app, but the CEO's claims create a privacy expectation that this contradicts.</td></tr>
+                        <tr><td>PostHog session replay (own screens)</td><td><strong>Useful for UX improvement</strong></td><td>Infrastructure present</td><td>LOW — Records only Kahf Guard's own settings/dashboard screens. Standard developer practice for UX optimization. <strong>However, not disclosed in privacy policy.</strong></td></tr>
+                        <tr><td>Installed apps sync for ALL users</td><td><strong>Useful for blocking effectiveness</strong></td><td>Yes (all users)</td><td>LOW-MEDIUM — Helps detect circumvention patterns and know which apps to target. Was part of the product before parental control was added. Should be clearly disclosed.</td></tr>
+                        <tr><td>Usage sync for ALL users</td><td><strong>Useful for measuring blocking goals</strong></td><td>Yes (all users)</td><td>LOW-MEDIUM — Necessary to know if the app is achieving its goal (reducing time on harmful content). Data is device-identified, not user-identified. Should be clearly disclosed.</td></tr>
+                        <tr><td>Plain HTTP IP service fallback</td><td><strong>Minor best-practice issue</strong></td><td>Yes (<code>ip-api.com</code>)</td><td>LOW — The "leaked" data (your IP) is inherently visible to network observers already.</td></tr>
+                    </table>
+                </div>
+
+                <hr>
+
+                <h2>Summary Scorecard</h2>
+
+                <h3>Viral Post Claims</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>#</th><th>Claim</th><th>Accuracy</th><th>Notes</th></tr>
+                        <tr><td>1</td><td>Facebook SDK sends data to Meta</td><td><span class="verdict v-partial">PARTIALLY TRUE</span></td><td>SDK telemetry (GAID, auto-events) flows to Meta, but app does NOT actively send PII. "Sold" is wrong framing.</td></tr>
+                        <tr><td>2</td><td>Reads URLs from 17 browsers</td><td><span class="verdict v-true">TRUE (18 actually)</span></td><td>Standard for content blockers</td></tr>
+                        <tr><td>3</td><td>ALLOWLISTED_SIG is a backdoor</td><td><span class="verdict v-false">FALSE</span></td><td>Standard dual-signing</td></tr>
+                        <tr><td>3b</td><td>evaluateJavascript = remote code exec</td><td><span class="verdict v-false">FALSE</span></td><td>Local WebView content filtering</td></tr>
+                        <tr><td>4</td><td>12 system events restart tracking</td><td><span class="verdict v-true">TRUE</span></td><td>Standard for persistent services</td></tr>
+                        <tr><td>5</td><td>Monitors WhatsApp/Telegram/Instagram</td><td><span class="verdict v-true">TRUE</span></td><td>Standard for content/parental control. WhatsApp: monitors screen state/tabs, NOT chat content.</td></tr>
+                        <tr><td>6</td><td>FCM silently uploads data</td><td><span class="verdict v-true">TRUE</span></td><td>Standard for parental control and accountability tools</td></tr>
+                        <tr><td>7a</td><td>UUID persists after uninstall</td><td><span class="verdict v-mislead">MISLEADING</span></td><td>Standard Android backup for user convenience, not a tracking mechanism</td></tr>
+                        <tr><td>7b</td><td>11 IP services, one HTTP</td><td><span class="verdict v-partial">PARTIALLY TRUE</span></td><td>13 total IP endpoints found in our build; 1 plain HTTP confirmed (minimal real-world risk)</td></tr>
+                        <tr><td>8</td><td>BootReceiver code is hidden</td><td><span class="verdict v-true">TRUE</span></td><td>PairIP anti-tamper; standard commercial practice</td></tr>
+                        <tr><td>9</td><td>OpenReplay records everything</td><td><span class="verdict v-partial">WRONG NAME, but endpoint exists</span></td><td>PostHog in v4.6.188, but <code>openreplay.kahf.co.uk</code> is a live endpoint. Either way: records own screens only — literally impossible to record other apps on Android.</td></tr>
+                        <tr><td>10</td><td>CEO statements are lies</td><td><span class="verdict v-partial">PARTIALLY TRUE</span></td><td>Some claims are contradicted by code and privacy policy, but the app is less malicious than portrayed</td></tr>
+                    </table>
+                </div>
+
+                <h3>CEO / Kahf Claims</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>Claim</th><th>Accuracy</th><th>Notes</th></tr>
+                        <tr><td>"Never sell your data"</td><td><span class="verdict v-true">Likely true</span></td><td>No evidence of direct data sale. SDK telemetry flows to Meta but app doesn't actively push PII.</td></tr>
+                        <tr><td>"Zero surveillance"</td><td><span class="verdict v-mislead">Misleading</span></td><td>Local monitoring is functional (required for blocking), but server-side analytics should be acknowledged</td></tr>
+                        <tr><td>"No data collection"</td><td><span class="verdict v-false">FALSE</span></td><td>Contradicted by code AND their own privacy policy</td></tr>
+                        <tr><td>"Data is safe / sacred trust"</td><td><span class="verdict v-unverif">Unverifiable</span></td><td>Depends on server-side security, which static analysis cannot assess</td></tr>
+                        <tr><td>Privacy policy is complete</td><td><span class="verdict v-false">FALSE</span></td><td>PostHog, session replay, and FCM triggers not disclosed</td></tr>
+                    </table>
+                </div>
+
+                <hr>
+
+                <h2>Balanced Conclusion</h2>
+                <p><strong>Kahf Guard is not a trojan.</strong> It is a legitimate content-blocking, digital wellbeing, and parental-control app that requires monitoring capabilities to function. Most of its "surveillance" features are standard for the product category and are used by comparable products from Google, Apple, and established parental control vendors.</p>
+                <p><strong>The app has a legitimate need for analytics.</strong> Kahf Guard's core mission is helping users avoid haram content and reduce digital addiction. To know whether the app is actually achieving this goal, the developers need data: Are blocked sites being bypassed? Is time on social media decreasing? Which blocking features are most effective? Without this feedback loop, they cannot improve the product. Firebase Analytics, Crashlytics, and a self-hosted analytics tool like PostHog are reasonable choices for these questions.</p>
+                
+                <p><strong>However, Kahf Guard has real transparency problems:</strong></p>
+                <ol>
+                    <li><strong>Undisclosed PostHog analytics</strong> with session replay infrastructure is a significant privacy policy gap. Even though session replay only captures Kahf Guard's own settings screens (which contain no sensitive personal data), it should be disclosed for transparency.</li>
+                    <li><strong>Facebook SDK integration</strong> — while the app does NOT actively send user PII (email/name/phone) to Facebook, the SDK does send device-level advertising identifiers (GAID) and auto-logged events to Meta's ad network. This is worth acknowledging, especially since the CEO claims "no data collection." The Facebook SDK is not necessary for the app's blocking functionality.</li>
+                    <li><strong>The CEO's absolutist marketing language</strong> ("zero," "never," "no data collection") is contradicted by the code and even by Kahf's own privacy policy. The privacy policy correctly discloses time-on-app tracking, app lists for child devices, and Facebook Analytics integration — which means the CEO's public statements are less accurate than his own company's privacy policy. A simple acknowledgment like <em>"We collect usage analytics to improve blocking effectiveness"</em> would have been more honest and harder to attack.</li>
+                    <li><strong>The privacy policy needs updating</strong> — it should disclose PostHog, describe the periodic sync mechanisms, and clarify what "anonymized" means in the context of device IDs and advertising identifiers.</li>
+                </ol>
+
+                <p><strong>The viral post raises valid questions but wraps them in dangerous hyperbole.</strong> Calling a legitimate app a "trojan," claiming users are "sold to Facebook," and describing standard Android backup as permanent tracking are factual errors that undermine the post's credibility. Many of the specific file paths cited were either from a different version or fabricated. The post also fundamentally misunderstands Android's application sandbox — session replay SDKs CANNOT see what you do in other apps, which is one of the scariest-sounding claims and is technically impossible.</p>
+                <p><strong>The real issue is not malice, but communication.</strong> Kahf Guard is a useful product for its target audience. Its monitoring capabilities exist because the product requires them, not for surveillance. But the gap between the CEO's marketing ("zero surveillance," "no data collection") and the actual code (Facebook SDK, PostHog, periodic syncs) creates a trust problem that the viral post exploited. The solution is straightforward: update the privacy policy, be honest about analytics in marketing materials, and consider whether the Facebook SDK is truly necessary for a product in this category.</p>
+
+                <hr>
+                <p class="disclaimer"><em>This report is an independent technical assessment based on static code analysis of APK v4.6.188 using JADX 1.5.5. The viral post analyzed v4.6.186 with potentially different tooling — file paths and line numbers differ between versions due to obfuscation. Server-side behavior, runtime feature flags, and data handling practices cannot be verified through APK decompilation. The findings here represent what the code is <strong>capable of</strong>, not necessarily what is <strong>actively deployed</strong> for all users at all times.</em></p>
+            </div>
+
+
+            <!-- BANGLA CONTENT -->
+            <div id="content-bn" class="lang-content">
+                <h1>চূড়ান্ত ফ্যাক্ট-চেক রিপোর্ট: কাহফ গার্ড (Kahf Guard) APK v4.6.188</h1>
+                
+                <div class="meta-box">
+                    <p><strong>তারিখ:</strong> ২০২৬-০৪-০৬</p>
+                    <p><strong>বিল্ড (Build):</strong> <code>com.kahf.dns</code> v4.6.188 (APKPure XAPK)</p>
+                    <p><strong>টুলচেইন:</strong> JADX 1.5.5 (স্ট্যান্ডার্ড মোড + <code>--show-bad-code</code>)</p>
+                    <p><strong>আওতা (Scope):</strong> শুধুমাত্র স্ট্যাটিক অ্যানালাইসিস। কোড ডিকম্পাইল করে সার্ভার-সাইড বিহেভিয়ার বা রানটাইম সিদ্ধান্ত যাচাই করা সম্ভব নয়।</p>
+                    <p><strong>তথ্যসূত্র:</strong> ভাইরাল ফেসবুক পোস্ট (যেখানে v4.6.186 বিশ্লেষণ করা হয়েছিল), সিইও-র পাবলিক স্টেটমেন্ট, কাহফ গার্ডের প্রাইভেসি পলিসি (০৪-১২-২০২৪ থেকে কার্যকর), kahfguard.com ওয়েবসাইট এবং ডিকম্পাইল করা সোর্স কোড।</p>
+                </div>
+
+                <blockquote>
+                    <p><strong>ফাইলের পাথ এবং লাইন নম্বর সম্পর্কে গুরুত্বপূর্ণ নোট:</strong> ভাইরাল পোস্টটিতে APK v4.6.186 বিশ্লেষণ করা হয়েছিল, যেখানে এই রিপোর্টটি v4.6.188 বিশ্লেষণ করেছে। অ্যান্ড্রয়েড অ্যাপগুলো ProGuard/R8 অবসফাসকেশন ব্যবহার করে, যা প্রতিটি বিল্ডের সময় ক্লাসের নাম পরিবর্তন করে এবং লাইন নম্বর শিফট করে। তাছাড়া ভিন্ন JADX ভার্সন ভিন্ন আউটপুট দেয়। এই রিপোর্টে যেখানেই বলা হয়েছে যে ভাইরাল পোস্টের কোনো নির্দিষ্ট ফাইলের পাথ "পাওয়া যায়নি," তার অর্থ হলো <strong>আমাদের v4.6.188 ডিকম্পাইলেশনে সেটি পাওয়া যায়নি</strong> — মূল ফাংশনালিটি ভিন্ন কোনো পাথে থাকতে পারে। আমরা ফাইলের পাথ যাই হোক না কেন, প্রতিটি দাবিকৃত <em>বিহেভিয়ার (আচরণ)</em> স্বাধীনভাবে যাচাই করেছি।</p>
+                </blockquote>
+
+                <h2>এক্সিকিউটিভ সামারি</h2>
+                <p>একটি ভাইরাল ফেসবুক পোস্টে কাহফ গার্ডকে "রিমোট-কন্ট্রোলড ট্রোজান" বলে অভিযোগ করা হয়েছে, যা "ফেসবুকের কাছে ব্যবহারকারীর ডেটা বিক্রি করে" এবং "চরম নজরদারি" (extreme surveillance) চালায়। এই রিপোর্টটি ডিকম্পাইল করা APK কোড, পাবলিশ করা প্রাইভেসি পলিসি এবং সিইও-র পাবলিক স্টেটমেন্টের বিপরীতে স্বাধীনভাবে প্রতিটি দাবি যাচাই করেছে।</p>
+                
+                <p><strong>প্রোডাক্ট কনটেক্সট বোঝা:</strong> কাহফ গার্ড মূলত একটি কন্টেন্ট-ব্লকিং এবং ডিজিটাল ওয়েলবিয়িং অ্যাপ, যা ব্যবহারকারীদের ইন্টারনেটে হারাম কন্টেন্ট থেকে দূরে থাকতে সাহায্য করে। ক্ষতিকর ওয়েবসাইট ফিল্টার করতে এটি DNS-লেভেল ব্লকিং এবং অ্যাপের ভেতরের নির্দিষ্ট কন্টেন্ট (যেমন: রিলস, শর্টস, ব্রাউজারে অ্যাডাল্ট কন্টেন্ট) ব্লক করতে Accessibility Service পারমিশন ব্যবহার করে। এমন একটি প্রোডাক্টকে কার্যকর করতে ডেভেলপারদের অ্যানালিটিক্স প্রয়োজন হয়, যাতে তারা বুঝতে পারেন তাদের ব্লকিং ঠিকমতো কাজ করছে কি না—ব্যবহারকারীরা কি ক্ষতিকর কন্টেন্টে কম সময় দিচ্ছেন? ফিল্টারগুলো কি কার্যকর? কোন ফিচারগুলো সবচেয়ে বেশি ব্যবহৃত হচ্ছে? এগুলো যেকোনো প্রোডাক্টের উন্নতির জন্যই একটি বৈধ প্রয়োজন। মূল প্রশ্নটি এটা নয় যে অ্যানালিটিক্স থাকা উচিত কি না, বরং প্রশ্ন হলো <em>অ্যানালিটিক্সের নির্দিষ্ট পছন্দগুলো</em> আনুপাতিক কি না এবং তা সঠিকভাবে ডিসক্লোজ (প্রকাশ) করা হয়েছে কি না।</p>
+                
+                <p><strong>মূল ফাইন্ডিংস (Key findings):</strong></p>
+                <ul>
+                    <li>কয়েকটি মূল অভিযোগের সত্যতা আছে — অ্যাপটিতে Facebook SDK যুক্ত আছে যেখানে অ্যাডভার্টাইজার ট্র্যাকিং এনাবল করা আছে, সেশন রিপ্লে ইনফ্রাস্ট্রাকচারসহ PostHog অ্যানালিটিক্স ব্যবহার করা হয়েছে এবং ইন্সটল করা অ্যাপ ও ইউসেজ ডেটা পর্যায়ক্রমিকভাবে ও অন-ডিমান্ড সার্ভারে সিঙ্ক হয়।</li>
+                    <li>কয়েকটি দাবি তথ্যগতভাবে ভুল বা অতিরঞ্জিত — প্রোডাক্টের ভুল নাম, অতিরঞ্জিত সংখ্যা এবং স্ট্যান্ডার্ড অ্যান্ড্রয়েড ডেভেলপমেন্ট প্যাটার্ন সম্পর্কে ভুল ধারণা।</li>
+                    <li>সিইও-র মার্কেটিং ভাষা ("জিরো সার্ভেইল্যান্স," "কখনো ডেটা বিক্রি করি না," "কোনো ডেটা কালেকশন নেই") অ্যাপের কোড এবং এমনকি কাহফের নিজস্ব প্রাইভেসি পলিসির সাথেই সাংঘর্ষিক। এটি আরও সঠিকভাবে বলা যেত এভাবে: <em>"আমরা আমাদের ব্লকিংয়ের কার্যকারিতা উন্নত করতে এবং প্রোডাক্টের লক্ষ্য পরিমাপে অ্যানালিটিক্স সংগ্রহ করি।"</em></li>
+                    <li>ভাইরাল পোস্টে যেটাকে "নজরদারি" (surveillance) বলা হচ্ছে, তার বেশিরভাগই আসলে সাধারণ মেকানিজম যার মাধ্যমে অ্যান্ড্রয়েডে কন্টেন্ট-ব্লকিং এবং প্যারেন্টাল-কন্ট্রোল অ্যাপগুলো কাজ করে।</li>
+                </ul>
+
+                <h2>দাবি ধরে ধরে ফ্যাক্ট-চেক (Claim-by-Claim Fact-Check)</h2>
+
+                <h3>দাবি ১: "Facebook SDK মেটার কাছে ডেটা পাঠায় / ব্যবহারকারীদের ফেসবুকের কাছে বিক্রি করে দিয়েছে"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>Facebook SDK কি আছে?</td><td><span class="verdict v-true">সত্য</span> — <code>KahfGuardApp.m4516b()</code>-এ নিশ্চিত করা হয়েছে</td></tr>
+                        <tr><td>AdvertiserID এনাবল করা?</td><td><span class="verdict v-true">সত্য</span> — <code>com.facebook.sdk.AdvertiserIDCollectionEnabled = true</code></td></tr>
+                        <tr><td>AutoLogEvents এনাবল করা?</td><td><span class="verdict v-true">সত্য</span> — <code>com.facebook.sdk.AutoLogAppEventsEnabled = true</code></td></tr>
+                        <tr><td>Advanced Matching ইনফ্রাস্ট্রাকচার আছে?</td><td><span class="verdict v-partial">সত্য (কিন্তু প্যাসিভ)</span> — Facebook SDK-এর <code>UserDataStore</code> কোড <code>ec/C3439k.java</code>-এ আছে, যেখানে <code>email</code>, <code>first_name</code>, <code>last_name</code>, <code>phone</code> এর ফিল্ড রয়েছে। তবে, <strong>কাহফ গার্ডের নিজস্ব কোড সক্রিয়ভাবে</strong> <code>setUserData()</code>, <code>setUserEmail()</code> ইত্যাদি কল করে না। <code>com/kahf/dns/</code> প্যাকেজে এগুলো কলের কোনো প্রমাণ পাওয়া যায়নি। এটি নিছক একটি <strong>ল্যাটেন্ট (সুপ্ত) SDK লাইব্রেরি কোড</strong> যা প্রতিটি Facebook SDK ইন্টিগ্রেশনের সাথেই থাকে।</td></tr>
+                        <tr><td>"ফেসবুকের কাছে বিক্রি করেছে"?</td><td><span class="verdict v-false">মিথ্যা</span> — অ্যাড অ্যাট্রিবিউশনের জন্য SDK টেলিমেট্রি মানে সরাসরি ডেটা বিক্রি নয়। তাছাড়া ব্যবহারকারীর ইমেইল/নাম/ফোন ফেসবুকের কাছে সক্রিয়ভাবে পাঠানোর কোনো প্রমাণ পাওয়া যায়নি।</td></tr>
+                        <tr><td>ফাইলের পাথ <code>hg/l0.java</code> লাইন ৯৭-১০৯?</td><td><span class="verdict v-unverif">পাওয়া যায়নি</span> — আমাদের v4.6.188 ডিকম্পাইলেশনে পাওয়া যায়নি। সম্ভবত v4.6.186-এ ছিল। আমাদের বিল্ডে এর কোড <code>ec/C3439k.java</code>-তে রয়েছে।</td></tr>
+                    </table>
+                </div>
+                <p><strong>এই ইন্টিগ্রেশনে Facebook SDK আসলে কী সংগ্রহ করে:</strong> AdvertiserID এবং AutoLogEvents এনাবল থাকলে SDK স্বয়ংক্রিয়ভাবে সংগ্রহ করে: Google Advertising ID (GAID), অ্যাপ ইনস্টল/লঞ্চ ইভেন্ট এবং ডিভাইস মেটাডেটা (OS, মডেল, ক্যারিয়ার ইত্যাদি)। Advanced Matching ফিচারটি (যা ইমেইল/নাম পাঠাতে পারে) লাইব্রেরি কোড হিসেবে থাকলেও কাহফ গার্ডের কোড দ্বারা তা <strong>সক্রিয়ভাবে কল করা হয় না</strong>।</p>
+                <p><strong>স্ট্যান্ডার্ড প্র্যাকটিস কনটেক্সট:</strong> Facebook SDK / Meta SDK অ্যাড অ্যাট্রিবিউশন এবং ক্যাম্পেইন পরিমাপের জন্য মিলিয়ন মিলিয়ন অ্যাপ ব্যবহার করে। এটি স্ট্যান্ডার্ড ইন্ডাস্ট্রি প্র্যাকটিস।</p>
+                <p><strong>প্রাইভেসি পলিসি ডিসক্লোজার:</strong> প্রাইভেসি পলিসিতে 'Third Party Access'-এর নিচে "Facebook Analytics"-এর কথা উল্লেখ <strong>আছে</strong>। তবে পলিসিতে দাবি করা হয়েছে যে "কেবলমাত্র অ্যাগ্রিগেটেড, অ্যানোনিমাইজড ডেটা পাঠানো হয়।"</p>
+
+                <h3>দাবি ২: "১৭টি ব্রাউজার থেকে ইউআরএল (URL) বার পড়ে"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>ব্রাউজারের URL পড়ে?</td><td><span class="verdict v-true">সত্য</span> — <code>KahfBlockerService</code> অ্যান্ড্রয়েড অ্যাক্সেসিবিলিটি সার্ভিস ব্যবহার করে</td></tr>
+                        <tr><td>১৭টি ব্রাউজার?</td><td><span class="verdict v-partial">কাছাকাছি</span> — আসলে কোডে <strong>১৮টি</strong> ব্রাউজার প্যাকেজ আইডি রয়েছে</td></tr>
+                        <tr><td>ফাইলের পাথ <code>ei/a.java</code> লাইন ২৪/২৮৭?</td><td><span class="verdict v-unverif">পাওয়া যায়নি</span> — আমাদের v4.6.188 ডিকম্পাইলেশনে পাওয়া যায়নি। আসল কোড <code>KahfBlockerService.java</code> (লাইন ৮১-এর আশেপাশে) রয়েছে।</td></tr>
+                    </table>
+                </div>
+                <p><strong>স্ট্যান্ডার্ড প্র্যাকটিস কনটেক্সট:</strong> URL-লেভেল ফিল্টারিংয়ের জন্য অ্যান্ড্রয়েডের <strong>সব</strong> কন্টেন্ট ব্লকার এভাবেই কাজ করে। DNS-লেভেল ব্লকিং HTTPS পাথ দেখতে পারে না। ইনস্টাগ্রামের রিলস ব্লক করে ডিএম (DM) চালু রাখতে হলে অ্যাক্সেসিবিলিটি নোড থেকেই URL পড়তে হবে। এটি কাজের জন্য প্রয়োজনীয় মেকানিজম, নজরদারির প্রমাণ নয়।</p>
+
+                <h3>দাবি ৩: "ALLOWLISTED_SIG = ব্যাকডোর / evaluateJavascript = রিমোট কোড এক্সিকিউশন"</h3>
+                <h4>ALLOWLISTED_SIG</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>সেকেন্ডারি সিগনেচার আছে?</td><td><span class="verdict v-true">সত্য</span> — <code>com.pairip.SignatureCheck</code>-এ <code>ALLOWLISTED_SIG = "Vn3kj4p..."</code> আছে</td></tr>
+                        <tr><td>"যে কেউ এটা দিয়ে ম্যালওয়্যার সাইন করতে পারবে"?</td><td><span class="verdict v-false">মিথ্যা</span> — শুধুমাত্র যার কাছে সংশ্লিষ্ট প্রাইভেট কী (private key) আছে, তিনিই ম্যাচিং সিগনেচার তৈরি করতে পারবেন।</td></tr>
+                        <tr><td>এটি কি ব্যাকডোর?</td><td><span class="verdict v-false">মিথ্যা</span> — বিভিন্ন ডিস্ট্রিবিউশন চ্যানেলের (প্লে স্টোর, ডিরেক্ট এপিকে) জন্য এটি স্ট্যান্ডার্ড ডুয়াল-সাইনিং প্যাটার্ন।</td></tr>
+                    </table>
+                </div>
+
+                <h4>evaluateJavascript</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>evaluateJavascript ব্যবহার হয়েছে?</td><td><span class="verdict v-true">সত্য</span> — <code>p176hl/C5181p.java</code> এবং <code>p000/C12905z0.java</code>-তে আছে</td></tr>
+                        <tr><td>রিমোট সার্ভার ইচ্ছামতো JS পুশ করে?</td><td><span class="verdict v-unverif">প্রমাণিত নয়</span> — জাভাস্ক্রিপ্ট স্ট্রিংগুলো অ্যাপের অভ্যন্তরীণ স্টেট মেশিন থেকে আসে, রিমোট এন্ডপয়েন্ট থেকে সরাসরি নয়।</td></tr>
+                    </table>
+                </div>
+                <p><strong>স্ট্যান্ডার্ড প্র্যাকটিস কনটেক্সট:</strong> WebView-এ জাভাস্ক্রিপ্ট ইনজেক্ট করার জন্য <code>evaluateJavascript()</code> হলো স্ট্যান্ডার্ড অ্যান্ড্রয়েড API। এটি এখানে কন্টেন্ট ফিল্টারিংয়ের (যেমন ইনস্টাগ্রাম ওয়েব ভিউ থেকে রিলস সরানো) জন্য ব্যবহার করা হয়েছে। এটি কোনো ব্যাকডোর নয়।</p>
+
+                <h3>দাবি ৪: "১২টি সিস্টেম ইভেন্ট ট্র্যাকিং রিস্টার্ট করে"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>একাধিক সিস্টেম ইভেন্ট মনিটর করা হয়?</td><td><span class="verdict v-true">সত্য</span></td></tr>
+                        <tr><td>১২টি ইভেন্ট?</td><td><span class="verdict v-true">সত্য</span> — <code>HeartbeatReceiver</code> এবং <code>SystemEventReceiver</code> মিলিয়ে</td></tr>
+                        <tr><td>উদ্দেশ্য কি নজরদারি?</td><td><span class="verdict v-mislead">বিভ্রান্তিকর</span> — মূল উদ্দেশ্য হলো ব্লকিং সার্ভিসটিকে সচল (alive) রাখা।</td></tr>
+                    </table>
+                </div>
+                <p><strong>স্ট্যান্ডার্ড প্র্যাকটিস কনটেক্সট:</strong> যেকোনো অ্যান্ড্রয়েড সার্ভিস যা সার্বক্ষণিক চলতে হয় (কন্টেন্ট ব্লকার, ভিপিএন, ফিটনেস ট্র্যাকার), তাকে সিস্টেম ইভেন্টের পর রিস্টার্ট হতে হয়। ব্লকিং সার্ভিস বন্ধ হয়ে গেলে ব্যবহারকারী সুরক্ষা হারাবেন। এটি নজরদারির প্রমাণ নয়।</p>
+
+                <h3>দাবি ৫: "ভয়ংকর নজরদারি — WhatsApp/Telegram/Instagram"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>সোশ্যাল অ্যাপ মনিটর করে?</td><td><span class="verdict v-true">সত্য</span> — মোট ১৪টি সোশ্যাল অ্যাপ।</td></tr>
+                        <tr><td>WhatsApp চ্যাট লিস্ট ট্র্যাকিং?</td><td><span class="verdict v-mislead">বিভ্রান্তিকর</span> — অ্যাপটি মনিটর করে ব্যবহারকারী <strong>কোন ট্যাব/স্ক্রিনে</strong> আছেন (যেমন "Updates"/Status ট্যাব), চ্যাট লিস্টের কন্টেন্ট বা নাম নয়। এটি অ্যাক্সেসিবিলিটি নোড আইডি যেমন <code>com.whatsapp:id/updates_list</code> পড়ে শুধু Status/Stories ব্লক করার জন্য।</td></tr>
+                        <tr><td>Telegram টেক্সট পড়া?</td><td><span class="verdict v-true">সত্য</span> — "risky word" ব্লকিং ফিচারের জন্য অ্যাক্সেসিবিলিটি নোড থেকে টেক্সট পড়ে।</td></tr>
+                        <tr><td>Instagram মনিটরিং?</td><td><span class="verdict v-true">সত্য</span> — রিলস ব্লক করার জন্য <code>reel_recycler</code> ইত্যাদি নোড আইডি মনিটর করে।</td></tr>
+                        <tr><td>ইন্সটল করা সব অ্যাপ সার্ভারে পাঠানো হয়?</td><td><span class="verdict v-true">সত্য</span> — <code>GetChildDevicesQuery</code>-তে <code>installedApps</code> অন্তর্ভুক্ত আছে।</td></tr>
+                    </table>
+                </div>
+                <p><strong>স্ট্যান্ডার্ড প্র্যাকটিস কনটেক্সট:</strong> কন্টেন্ট-ব্লকিং বা প্যারেন্টাল-কন্ট্রোল অ্যাপগুলোকে তাদের ফিচার বাস্তবায়নের জন্য অ্যাপের স্ক্রিন মনিটর করতেই হয়। পুরো ইনস্টাগ্রাম ব্লক না করে শুধু রিলস ব্লক করতে হলে অ্যাক্সেসিবিলিটি নোডের মাধ্যমে স্ক্রিনের কনটেক্সট বুঝতে হবে। Screen Time বা Google Family Link-ও ঠিক এভাবেই কাজ করে।</p>
+
+                <h3>দাবি ৬: "FCM সাইলেন্ট পুশ = ট্রোজান / রিমোট ডেটা আপলোড"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>সার্ভার নীরবে ডেটা সিঙ্ক ট্রিগার করতে পারে?</td><td><span class="verdict v-true">সত্য</span> — "Silent sync message" এর মাধ্যমে।</td></tr>
+                        <tr><td>Installed apps সিঙ্ক ট্রিগার হয়?</td><td><span class="verdict v-true">সত্য</span></td></tr>
+                        <tr><td>App usage সিঙ্ক ট্রিগার হয়?</td><td><span class="verdict v-true">সত্য</span></td></tr>
+                        <tr><td>এটি কি "ট্রোজান"?</td><td><span class="verdict v-false">মিথ্যা</span> — এগুলো প্যারেন্টাল কন্ট্রোল ইনফ্রাস্ট্রাকচার, ম্যালওয়্যার নয়।</td></tr>
+                    </table>
+                </div>
+                <p><strong>স্ট্যান্ডার্ড প্র্যাকটিস কনটেক্সট:</strong> প্যারেন্টাল কন্ট্রোলের জন্য সাইলেন্ট FCM পুশ Google Family Link, Qustodio ইত্যাদি অ্যাপ ব্যবহার করে। পিতামাতার জন্য সন্তানের ডিভাইসের স্ট্যাটাস নীরবে চেক করতে এটি প্রয়োজন। তবে <strong>বৈধ উদ্বেগের বিষয় হলো</strong>, একই মেকানিজম ব্যবহার করে কাহফের সার্ভার যেকোনো ব্যবহারকারীর ডেটা নীরবে আপলোড করতে পারে। এটি সম্পূর্ণ সার্ভার-সাইড লজিকের ওপর নির্ভরশীল যা স্ট্যাটিক অ্যানালাইসিসে যাচাই করা সম্ভব নয়।</p>
+
+                <h3>দাবি ৭: "আনইনস্টল করার পরও UUID থেকে যায় / ১১টি আইপি (IP) লুকআপ সার্ভিস"</h3>
+                <h4>UUID ব্যাকআপ</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>Google Cloud-এ UUID ব্যাকআপ হয়?</td><td><span class="verdict v-partial">আংশিক সত্য</span> — <code>backup_rules.xml</code> <code>user_prefs.xml</code> ব্যাকআপ করে।</td></tr>
+                        <tr><td>"চিরস্থায়ী ট্র্যাকিং"?</td><td><span class="verdict v-false">মিথ্যা</span> — এটি স্ট্যান্ডার্ড অ্যান্ড্রয়েড অটো ব্যাকআপ (Android Auto Backup); ট্র্যাকিং মেকানিজম নয়।</td></tr>
+                    </table>
+                </div>
+                <p>এটি অ্যান্ড্রয়েডের একটি সুবিধাজনক ফিচার (যেমন হোয়াটসঅ্যাপ বা ক্রোম সেটিং রিস্টোর হয়)। হাজার হাজার অ্যাপ এটি ব্যবহার করে।</p>
+
+                <h4>IP লুকআপ সার্ভিস</h4>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>১১টি থার্ড-পার্টি IP সার্ভিস?</td><td><span class="verdict v-partial">আংশিক সত্য</span> — আমরা আমাদের বিশ্লেষণে <strong>১৩টি</strong> IP-রিলেটেড এন্ডপয়েন্ট পেয়েছি। সাধারণ দাবিটি সত্য।</td></tr>
+                        <tr><td>প্লেইন HTTP সার্ভিস?</td><td><span class="verdict v-true">সত্য</span> — <code>http://ip-api.com/json/{ip}</code> (বিনা TLS-এ) Fallback #3 হিসেবে ব্যবহৃত হয়।</td></tr>
+                    </table>
+                </div>
+                <p><strong>সিকিউরিটি ঝুঁকি:</strong> ভাইরাল পোস্টে এটিকে বড় সিকিউরিটি ঝুঁকি বলা হলেও বাস্তবে এর মাধ্যমে শুধু আপনার পাবলিক আইপি জানা যায়। আপনার নেটওয়ার্ক ট্র্যাফিক যে মনিটর করছে, সে এমনিতেই আপনার আইপি জানে। যদিও HTTPS ব্যবহার করা বেস্ট প্র্যাকটিস, তবে এখানে বাস্তব ঝুঁকি নগণ্য।</p>
+
+                <h3>দাবি ৮: "BootReceiver-এ VMRunner ব্যবহার করা হয়েছে — লুকানো কোড"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>বুটের সময় VMRunner.invoke ব্যবহার হয়?</td><td><span class="verdict v-true">সত্য</span></td></tr>
+                        <tr><td>এনক্রিপ্টেড/অবসফাসকেটেড কোড?</td><td><span class="verdict v-true">সত্য</span> — VMRunner <code>libpairipcore.so</code> থেকে বাইটকোড লোড করে।</td></tr>
+                        <tr><td>"কী কাজ করে তা বিশ্লেষণ করা যায় না"?</td><td><span class="verdict v-partial">আংশিক সত্য</span> — শুধুমাত্র স্ট্যাটিক অ্যানালাইসিসের মাধ্যমে বোঝা সম্ভব নয়; ডায়নামিক অ্যানালাইসিস প্রয়োজন।</td></tr>
+                    </table>
+                </div>
+                <p><strong>স্ট্যান্ডার্ড প্র্যাকটিস কনটেক্সট:</strong> PairIP একটি কমার্শিয়াল অ্যান্টি-পাইরেসি সলিউশন যা ক্র্যাকিং ঠেকাতে অনেক অ্যান্ড্রয়েড অ্যাপ ব্যবহার করে। এটি ম্যালওয়্যারের প্রমাণ নয়, বরং কমার্শিয়াল সফটওয়্যার প্রটেকশনের প্রমাণ।</p>
+
+                <h3>দাবি ৯: "OpenReplay প্রতিটি ট্যাপ/সোয়াইপ/কীস্ট্রোক রেকর্ড করে"</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>বিষয় (Aspect)</th><th>রায় (Verdict)</th></tr>
+                        <tr><td>আমাদের বিল্ডে OpenReplay আছে?</td><td><span class="verdict v-unverif">পাওয়া যায়নি</span> — আমাদের ডিকম্পাইলেশনে কোনো OpenReplay ইন্টিগ্রেশন পাওয়া যায়নি।</td></tr>
+                        <tr><td><code>openreplay.kahf.co.uk</code> এন্ডপয়েন্ট?</td><td><span class="verdict v-partial">এন্ডপয়েন্টটি লাইভ আছে</span> — কোডে না থাকলেও ডোমেইনটি লাইভ আছে, যা নির্দেশ করে পূর্ববর্তী ভার্সনে এটি হয়তো ছিল।</td></tr>
+                        <tr><td>বর্তমান বিল্ডে সেশন রিপ্লে আছে?</td><td><span class="verdict v-true">সত্য</span> — OpenReplay নয়, বরং <strong>PostHog</strong> ব্যবহার করে সেশন রিপ্লে ইনফ্রাস্ট্রাকচার (<code>https://p.kahf.co.uk</code>) আছে।</td></tr>
+                        <tr><td>ট্যাপ/সোয়াইপ/কীস্ট্রোক রেকর্ড করতে পারে?</td><td><span class="verdict v-true">সত্য</span> (শুধুমাত্র কাহফ গার্ডের নিজস্ব স্ক্রিনে)</td></tr>
+                    </table>
+                </div>
+                <p><strong>অত্যন্ত গুরুত্বপূর্ণ ব্যাখ্যা:</strong> PostHog সেশন রিপ্লে <strong>শুধুমাত্র কাহফ গার্ডের নিজস্ব অ্যাপ স্ক্রিন</strong> (সেটিংস, ড্যাশবোর্ড) ক্যাপচার করতে পারে। এটি <strong>কোনোভাবেই</strong> ক্রোম, হোয়াটসঅ্যাপ, ইনস্টাগ্রাম বা অন্য কোনো অ্যাপের অ্যাক্টিভিটি দেখতে পারে না। অ্যান্ড্রয়েডের অ্যাপ্লিকেশন স্যান্ডবক্স এটি সম্পূর্ণভাবে প্রতিরোধ করে। ভাইরাল পোস্টের দাবি যে এটি "সব অ্যাপে সব রেকর্ড করে" তা অ্যান্ড্রয়েডে <strong>টেকনিক্যালি অসম্ভব</strong>।</p>
+                <p><strong>তবে:</strong> প্রাইভেসি পলিসিতে PostHog-এর কথা <strong>বলা নেই</strong>। এটি একটি বড় গাফিলতি যা সংশোধন করা উচিত।</p>
+
+                <h3>দাবি ১০: "সিইও-র ডাহা মিথ্যা কথা"</h3>
+                
+                <h4>সিইও-র দাবি: "আমরা কখনো আপনার ডেটা বিক্রি করি না। কখনোই না।"</h4>
+                <div class="table-wrapper">
+                    <table><tr><th>রায়</th><td><span class="verdict v-partial">আক্ষরিক অর্থে সম্ভবত সত্য</span></td></tr></table>
+                </div>
+                <p>অ্যাপটি সক্রিয়ভাবে ব্যবহারকারীর PII (ইমেইল/নাম) ফেসবুকের কাছে পুশ করে না। তবে, Facebook SDK ব্যবহারের কারণে অ্যাড নেটওয়ার্কে টেলিমেট্রি শেয়ার হয়, যা সিইও-র স্বীকার করা উচিত।</p>
+
+                <h4>সিইও-র দাবি: "আমরা জিরো-সার্ভেইল্যান্স, প্রাইভেসি-ফার্স্ট অ্যাপ্রোচে কাজ করি।"</h4>
+                <div class="table-wrapper">
+                    <table><tr><th>রায়</th><td><span class="verdict v-mislead">ব্যাখ্যা প্রয়োজন</span> — লোকাল মনিটরিং কাজের জন্য দরকারি, সার্ভেইল্যান্স নয়; কিন্তু সার্ভার-সাইড অ্যানালিটিক্সগুলো পরিষ্কারভাবে বলা উচিত ছিল।</td></tr></table>
+                </div>
+
+                <h4>সিইও-র দাবি: "ফোনে কেউ কী করে তার কোনো কিছুই আমরা সংগ্রহ করি না।"</h4>
+                <div class="table-wrapper">
+                    <table><tr><th>রায়</th><td><span class="verdict v-false">কোড এবং প্রাইভেসি পলিসির সাথে সাংঘর্ষিক</span></td></tr></table>
+                </div>
+                <p>অ্যাপটি প্রতি ৬ ঘণ্টায় ইনস্টল করা অ্যাপের লিস্ট এবং অ্যাপ ইউসেজ ডেটা সিঙ্ক করে। সিইও-র নিজস্ব প্রাইভেসি পলিসিই এই দাবির বিরোধিতা করে।</p>
+
+                <h4>সিইও-র দাবি: "চাইলে আপনি অ্যাপটি ডিকম্পাইল করে কোড যাচাই করতে পারেন।"</h4>
+                <div class="table-wrapper">
+                    <table><tr><th>রায়</th><td><span class="verdict v-true">আইরনিক কিন্তু টেকনিক্যালি বৈধ</span></td></tr></table>
+                </div>
+
+                <hr>
+
+                <h2>প্রাইভেসি পলিসি বিশ্লেষণ</h2>
+                <p><strong>কার্যকর হওয়ার তারিখ:</strong> ০৪-১২-২০২৪</p>
+                
+                <h3>প্রাইভেসি পলিসিতে যা যা প্রকাশ করা হয়েছে (Disclosed):</h3>
+                <ol>
+                    <li>Facebook Analytics</li>
+                    <li>Google Analytics for Firebase</li>
+                    <li>Firebase Crashlytics</li>
+                    <li>Google Play Services</li>
+                    <li>ইমেইল/ফোন, পাবলিক আইপি, অন্যান্য অ্যাপে কাটানো সময়, চাইল্ড ডিভাইসের অ্যাপ লিস্ট ইত্যাদি সংগ্রহ করা হয়।</li>
+                </ol>
+
+                <h3>যা প্রকাশ করা হয়নি (NOT disclosed):</h3>
+                <ol>
+                    <li><strong>PostHog অ্যানালিটিক্স</strong> — <code>p.kahf.co.uk</code>-এর কথা কোথাও নেই।</li>
+                    <li><strong>সেশন রিপ্লে ক্যাপাবিলিটি</strong> — ইউআই রেকর্ডিংয়ের কথা নেই।</li>
+                    <li><strong>FCM-ট্রিগার্ড ডেটা কালেকশন</strong> — সার্ভার নীরবে ডেটা আপলোডের রিকোয়েস্ট করতে পারে, তা বলা নেই।</li>
+                    <li><strong>পর্যায়ক্রমিক সিঙ্ক মেকানিজম</strong> — প্রতি ৬ ঘণ্টায় ডেটা সিঙ্কের কথা নেই।</li>
+                    <li><strong>একাধিক আইপি জিওলোকেশন সার্ভিস</strong> — ৬+ সার্ভিস ব্যবহারের কথা নেই।</li>
+                </ol>
+
+                <h3>কোড এবং প্রাইভেসি পলিসির মধ্যে দ্বন্দ্ব:</h3>
+                <p><strong>"শুধুমাত্র অ্যাগ্রিগেটেড, অ্যানোনিমাইজড ডেটা পাঠানো হয়"</strong> — Facebook SDK যে Google Advertising ID (GAID) পাঠায় এবং প্রতি-অ্যাপ ইউসেজ ডেটাতে যে প্যাকেজের নাম থাকে, তা পুরোপুরি "অ্যানোনিমাইজড" কি না তা বিতর্কের বিষয়।</p>
+
+                <hr>
+
+                <h2>ডেভেলপার লগিং — কী উন্মুক্ত হচ্ছে এবং কে দেখতে পাচ্ছে</h2>
+                <p><code>jadx_out</code> (স্ট্যান্ডার্ড) এবং <code>jadx_out_showbad</code>-এর আউটপুটে যথাক্রমে <strong>১৫০টি</strong> এবং <strong>২২৫টি</strong> লগ কল পাওয়া গেছে। সেনসিটিভ লগগুলো মূলত <code>AndroidNotificationService.java</code>-তে পাওয়া গেছে যা <code>--show-bad-code</code> ফ্লাগ দিয়ে বের করা হয়েছে।</p>
+
+                <h3>অ্যানালিটিক্স SDK কি এই লগগুলো পড়তে পারে?</h3>
+                <p>না। PostHog-এ <code>captureLogcat</code> ডিফল্টভাবে <strong>এনাবল করা নেই</strong> (false)। Firebase Crashlytics বা Facebook SDK-ও এগুলো স্বয়ংক্রিয়ভাবে পড়ে না। অর্থাৎ, <strong>লগগুলো ডিভাইসের ভেতরেই থাকে</strong>, থার্ড-পার্টি সার্ভারে যায় না।</p>
+
+                <h3>সেনসিটিভিটি ব্রেকডাউন (উচ্চ সংবেদনশীল লগ):</h3>
+                <ul>
+                    <li><strong>FCM টোকেন (আংশিক):</strong> <code>AndroidNotificationService.java:436</code>-এ FCM রেজিস্ট্রেশন টোকেনের প্রথম ২০টি ক্যারেক্টার লগ করা হয়।</li>
+                    <li><strong>সম্পূর্ণ FCM মেসেজ পেলোড:</strong> <code>AndroidNotificationService.java:554</code>-এ সার্ভার থেকে আসা প্রতিটি FCM পুশ মেসেজের সম্পূর্ণ কি-ভ্যালু ম্যাপ প্লেনটেক্সটে লগ করা হয়। এটি সবচেয়ে বেশি উদ্বেগের বিষয়।</li>
+                    <li><strong>অথেনটিকেশন টোকেন:</strong> <code>MainActivity.java:387</code>-এ ডিপ লিংকের মাধ্যমে পাওয়া অথেনটিকেশন টোকেনের প্রথম ১০ ক্যারেক্টার লগ করা হয়।</li>
+                </ul>
+
+                <h3>রিস্ক অ্যাসেসমেন্ট (ঝুঁকি মূল্যায়ন):</h3>
+                <p>এগুলো মূলত <strong>ডেভেলপারদের ডিবাগ লগ যা প্রোডাকশন বিল্ডে রয়ে গেছে</strong>। এটি একটি অবহেলা। অ্যান্ড্রয়েড ৪.১+ এ এই লগগুলো অন্যান্য সাধারণ অ্যাপ পড়তে পারে না। তবে ADB (USB debugging) এনাবল করা থাকলে পিসি থেকে তা পড়া সম্ভব। একটি প্রোডাকশন রিলিজ থেকে ProGuard-এর মাধ্যমে অবশ্যই এই <code>Log.d</code> কলগুলো সরিয়ে ফেলা উচিত। এগুলো নজরদারি নয়, বরং ডেভেলপারদের চরম অবহেলা (Developer negligence)।</p>
+
+                <hr>
+
+                <h2>অ্যানালিটিক্স বনাম সার্ভেইল্যান্স স্পেকট্রাম</h2>
+
+                <h3>এই ধরনের প্রোডাক্টের জন্য যা স্ট্যান্ডার্ড এবং প্রয়োজনীয়:</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>সক্ষমতা (Capability)</th><th>কেন প্রয়োজন?</th><th>ইন্ডাস্ট্রি তুলনা</th></tr>
+                        <tr><td>অ্যাক্সেসিবিলিটির মাধ্যমে ব্রাউজার URL মনিটরিং</td><td>DNS HTTPS পাথ দেখতে পারে না</td><td>সব অ্যান্ড্রয়েড কন্টেন্ট ব্লকার (NetGuard, AdGuard)</td></tr>
+                        <tr><td>সোশ্যাল অ্যাপ স্ক্রিন মনিটরিং</td><td>রিলস/শর্টস/স্ট্যাটাস ব্লক করার জন্য</td><td>Bark, Qustodio, Google Family Link</td></tr>
+                        <tr><td>ইন্সটল করা অ্যাপ লিস্ট</td><td>বাচ্চারা কী ইন্সটল করছে তা দেখার জন্য</td><td>Google Family Link, Apple Screen Time</td></tr>
+                        <tr><td>অ্যাপ ব্যবহারের সময় ট্র্যাকিং</td><td>ব্লকিং কার্যকর হচ্ছে কি না মাপার জন্য</td><td>Screen Time, Digital Wellbeing</td></tr>
+                        <tr><td>Firebase Analytics + Crashlytics</td><td>ক্র্যাশ রিপোর্ট এবং ইউসেজ মেট্রিক্স</td><td>প্রায় ৮০% অ্যান্ড্রয়েড অ্যাপে ব্যবহৃত হয়</td></tr>
+                        <tr><td>FCM সাইলেন্ট সিঙ্ক</td><td>ডিভাইস রিমোটলি চেক করার জন্য</td><td>Google Family Link-ও একই প্যাটার্ন ব্যবহার করে</td></tr>
+                    </table>
+                </div>
+
+                <h3>যা ব্লকিংয়ের প্রয়োজনের বাইরে:</h3>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>সক্ষমতা</th><th>ব্লকিংয়ের জন্য প্রয়োজন?</th><th>উদ্বেগের মাত্রা</th></tr>
+                        <tr><td>Facebook SDK</td><td><strong>প্রয়োজন নেই</strong></td><td>মাঝারি — সিইও বলছেন কোনো ডেটা কালেকশন নেই, অথচ অ্যাড নেটওয়ার্কে টেলিমেট্রি যাচ্ছে।</td></tr>
+                        <tr><td>PostHog সেশন রিপ্লে</td><td><strong>UX ইম্প্রুভমেন্টের জন্য উপকারী</strong></td><td>নিম্ন — শুধুমাত্র অ্যাপের নিজস্ব স্ক্রিন রেকর্ড করে। তবে প্রাইভেসি পলিসিতে বলা নেই বলে এটি সমস্যা।</td></tr>
+                        <tr><td>সব ইউজারের জন্য App Sync</td><td><strong>ব্লকিংয়ের কার্যকারিতা মাপতে উপকারী</strong></td><td>নিম্ন-মাঝারি — এটি স্পষ্টভাবে ডিসক্লোজ করা উচিত।</td></tr>
+                    </table>
+                </div>
+
+                <hr>
+
+                <h2>সারসংক্ষেপ স্কোরকার্ড (Summary Scorecard)</h2>
+                <div class="table-wrapper">
+                    <table>
+                        <tr><th>কার দাবি?</th><th>দাবি</th><th>সত্যতা</th></tr>
+                        <tr><td rowspan="4"><strong>ভাইরাল পোস্ট</strong></td><td>Facebook SDK মেটার কাছে ডেটা পাঠায়</td><td><span class="verdict v-partial">আংশিক সত্য</span> (কিন্তু PII পাঠায় না)</td></tr>
+                        <tr><td>WhatsApp/Telegram/Instagram-এ নজরদারি</td><td><span class="verdict v-true">সত্য</span> (তবে চ্যাট পড়ে না, স্ক্রিন স্টেট পড়ে)</td></tr>
+                        <tr><td>OpenReplay সব রেকর্ড করে</td><td><span class="verdict v-partial">ভুল নাম</span> (PostHog আছে, কিন্তু শুধু নিজের অ্যাপের ভেতর রেকর্ড করতে পারে)</td></tr>
+                        <tr><td>FCM নীরবে ডেটা আপলোড করে</td><td><span class="verdict v-true">সত্য</span> (এটি প্যারেন্টাল কন্ট্রোল স্ট্যান্ডার্ড)</td></tr>
+                        <tr><td rowspan="3"><strong>সিইও / কাহফ</strong></td><td>কখনো ডেটা বিক্রি করি না</td><td><span class="verdict v-true">সম্ভবত সত্য</span></td></tr>
+                        <tr><td>জিরো সার্ভেইল্যান্স</td><td><span class="verdict v-mislead">বিভ্রান্তিকর</span></td></tr>
+                        <tr><td>কোনো ডেটা সংগ্রহ করি না</td><td><span class="verdict v-false">মিথ্যা</span> (কোড ও পলিসির বিপরীত)</td></tr>
+                    </table>
+                </div>
+
+                <hr>
+
+                <h2>ভারসাম্যপূর্ণ উপসংহার (Balanced Conclusion)</h2>
+                <p><strong>কাহফ গার্ড কোনো ট্রোজান নয়।</strong> এটি একটি বৈধ কন্টেন্ট-ব্লকিং এবং প্যারেন্টাল-কন্ট্রোল অ্যাপ, যা কাজ করার জন্য মনিটরিং সক্ষমতা প্রয়োজন। এর "নজরদারি" ফিচারের বেশিরভাগই এই ক্যাটাগরির প্রোডাক্টের জন্য স্ট্যান্ডার্ড এবং Google বা Apple-এর মতো কোম্পানিগুলোর প্যারেন্টাল কন্ট্রোল ভেন্ডররাও এটি ব্যবহার করে।</p>
+                <p><strong>অ্যাপটির অ্যানালিটিক্সের বৈধ প্রয়োজন আছে।</strong> অ্যাপটির ব্লকিং ফিডব্যাক লুপ ছাড়া তারা প্রোডাক্ট উন্নত করতে পারবে না। Firebase বা PostHog-এর মতো টুলগুলো এই প্রশ্নগুলোর উত্তরের জন্য যৌক্তিক পছন্দ।</p>
+                
+                <p><strong>তবে, কাহফ গার্ডের স্বচ্ছতার মারাত্মক অভাব রয়েছে:</strong></p>
+                <ol>
+                    <li>প্রাইভেসি পলিসিতে PostHog অ্যানালিটিক্স এবং সেশন রিপ্লের কথা <strong>লুকিয়ে রাখা</strong> একটি বড় গাফিলতি।</li>
+                    <li><strong>Facebook SDK ইন্টিগ্রেশন</strong> ব্লকিংয়ের জন্য প্রয়োজনীয় নয়, তবুও এটি ডিভাইস আইডেন্টিফায়ার (GAID) মেটার অ্যাড নেটওয়ার্কে পাঠায়।</li>
+                    <li><strong>সিইও-র চূড়ান্ত মার্কেটিং ভাষা</strong> ("জিরো সার্ভেইল্যান্স," "কোনো ডেটা কালেকশন নেই") কোড এবং কাহফের নিজস্ব প্রাইভেসি পলিসির সাথেই সাংঘর্ষিক।</li>
+                    <li>প্রাইভেসি পলিসিটি <strong>আপডেট করা প্রয়োজন</strong>।</li>
+                </ol>
+
+                <p><strong>ভাইরাল পোস্টটি কিছু বৈধ প্রশ্ন তুললেও এটি বিপজ্জনক অতিরঞ্জনের মোড়কে মোড়া।</strong> একটি বৈধ অ্যাপকে "ট্রোজান" বলা এবং অ্যান্ড্রয়েড স্যান্ডবক্সিংয়ের ভুল ব্যাখ্যার মাধ্যমে দাবি করা যে সেশন রিপ্লে অন্য সব অ্যাপের ডেটা দেখতে পারে—এটি টেকনিক্যালি অসম্ভব এবং ভীতিকর।</p>
+                <p><strong>আসল সমস্যাটি উদ্দেশ্যপ্রণোদিত কোনো ক্ষতি নয়, বরং কমিউনিকেশন গ্যাপ।</strong> সিইও-র মার্কেটিং ("জিরো সার্ভেইল্যান্স") ও আসল কোডের (Facebook SDK, PostHog, পিরিওডিক সিঙ্ক) মধ্যে ফারাকটাই সেই ট্রাস্ট সমস্যা তৈরি করেছে যা ভাইরাল পোস্টটি কাজে লাগিয়েছে। সমাধান সোজা: প্রাইভেসি পলিসি আপডেট করুন, মার্কেটিংয়ে অ্যানালিটিক্স সম্পর্কে সৎ থাকুন, এবং Facebook SDK আসলেই দরকার কি না তা বিবেচনা করুন।</p>
+
+                <hr>
+                <p class="disclaimer"><em>এই রিপোর্টটি JADX 1.5.5 ব্যবহার করে APK v4.6.188-এর স্ট্যাটিক কোড অ্যানালাইসিসের ওপর ভিত্তি করে তৈরি করা একটি স্বাধীন প্রযুক্তিগত মূল্যায়ন। ভাইরাল পোস্টটিতে v4.6.186 বিশ্লেষণ করা হয়েছিল, তাই অবসফাসকেশনের কারণে লাইন নম্বর বা ফাইলের পাথ ভিন্ন হতে পারে। কোডটি <strong>কী করতে সক্ষম (capable of)</strong>, এই ফাইন্ডিংসগুলো তার প্রতিনিধিত্ব করে—এর মানে এই নয় যে সব ইউজারের জন্য এই ফিচারগুলো সবসময় <strong>সক্রিয়ভাবে ডিপ্লয় (actively deployed)</strong> করা আছে।</em></p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function setLang(lang) {
+            const enContent = document.getElementById('content-en');
+            const bnContent = document.getElementById('content-bn');
+            const btnEn = document.getElementById('btn-en');
+            const btnBn = document.getElementById('btn-bn');
+
+            if (lang === 'en') {
+                enContent.classList.add('active');
+                bnContent.classList.remove('active');
+                btnEn.classList.add('active');
+                btnBn.classList.remove('active');
+                document.body.classList.remove('lang-bn');
+            } else {
+                bnContent.classList.add('active');
+                enContent.classList.remove('active');
+                btnBn.classList.add('active');
+                btnEn.classList.remove('active');
+                document.body.classList.add('lang-bn');
+            }
+        }
+    </script>
+</body>
+</html>
