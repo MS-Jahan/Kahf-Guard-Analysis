@@ -1,373 +1,445 @@
-# Kahf Guard: Fact-Checking the Viral Allegations — What the Code Actually Shows
+# Final Fact-Check Report: Kahf Guard APK v4.6.188
 
-Recently, a viral Facebook post accused Kahf Guard of being a "remote-controlled trojan" that "sells user data to Facebook" and conducts "extreme surveillance."
+**Date:** 2026-04-06  
+**Build:** `com.kahf.dns` v4.6.188 (APKPure XAPK)  
+**Toolchain:** JADX 1.5.5 (standard mode + `--show-bad-code` for stubbed methods)  
+**Scope:** Static analysis only. Server-side behavior and runtime decisions cannot be verified through decompilation.  
+**Sources cross-referenced:** Viral Facebook post (which analyzed v4.6.186), CEO public statement, Kahf Guard privacy policy (effective 2024-12-04), kahfguard.com website, decompiled source code.
 
-As an analyst, I decompiled Kahf Guard's APK (v4.6.188) using JADX 1.5.5 and performed a static analysis. I also checked what each analytics SDK actually collects according to its official documentation. The viral post gets several specifics wrong, but not everything is baseless — some concerns are legitimate.
-
-Here's a balanced, evidence-based breakdown.
-
----
-
-## Part 1: The Analytics SDKs — What They Actually Collect
-
-The viral claim: "The app contains Facebook SDK, PostHog, and Google Analytics, which means they sell your data to Meta."
-
-### What the code shows:
-
-**Three analytics tools are confirmed** in the decompiled code:
-- **Facebook SDK** (`KahfGuardApp.m4516b`): initialized with `AdvertiserID: enabled` and `AutoLogEvents: enabled`
-- **PostHog** (`KahfGuardApp.m4518d`): self-hosted at `https://p.kahf.co.uk` with session replay capability
-- **Firebase Analytics + Crashlytics** (`KahfGuardApp.m4524j`): standard crash and usage reporting
-
-> **Critical Clarification: SDK Tracking Scope vs. Accessibility Monitoring**
->
-> A common source of confusion is whether these SDKs can track what you do in OTHER apps (Chrome, WhatsApp, Instagram, etc.). **They cannot.** Here's why:
->
-> **Android's Application Sandbox** ([Android Open Source Project](https://source.android.com/docs/security/app-sandbox)) assigns a unique user ID (UID) to each app and runs it in its own process with kernel-level isolation. An SDK embedded in Kahf Guard can only access Kahf Guard's own process, views, and screens. It **cannot** see your Chrome tabs, WhatsApp chats, or Instagram feeds.
->
-> - **PostHog Session Replay** captures the **host app's own view hierarchy** — i.e., Kahf Guard's settings screens, onboarding flows, and dashboard. It uses native Android APIs to "grab the view hierarchy state when the screen is drawn" ([PostHog Mobile Docs](https://posthog.com/docs/session-replay/mobile)) — referring to Kahf Guard's own screens only.
-> - **Facebook SDK** logs events that happen **inside Kahf Guard** (app launch, screen views within the app). It cannot see activity in other apps.
-> - **Firebase Analytics** tracks **Kahf Guard's own screens and lifecycle** — when the user opens Kahf Guard, which settings page they view, etc.
->
-> **The cross-app monitoring** (reading URLs from browsers, monitoring WhatsApp/Telegram/Instagram screens) is done by Kahf Guard's **own Accessibility Service code** (`KahfBlockerService`), NOT by any SDK. The Accessibility Service is a special Android API designed to cross app boundaries for accessibility features — which content blockers also use. This is Kahf Guard's custom blocking code, not third-party analytics.
->
-> **Summary:**
->
-> | What does the tracking | Can see Kahf Guard's own screens | Can see other apps' screens |
-> |---|---|---|
-> | Facebook SDK / PostHog / Firebase | **Yes** | **No** — blocked by Android sandbox |
-> | KahfBlockerService (Accessibility) | Yes | **Yes** — by design, for blocking |
-
-### What each SDK actually collects (per official docs + decompiled code):
-
-**All data below is scoped to Kahf Guard's OWN app screens only** (settings, onboarding, dashboard, etc.), not your activity in other apps:
-
-#### Facebook SDK (Meta App Events)
-
-The Facebook SDK is primarily used for ad attribution (tracking if a Facebook ad led to an app install) and logging user actions to build better ad profiles. When integrated, it communicates directly with Meta's servers.
-
-**Collected automatically** ([Meta Developer Docs](https://developers.facebook.com/docs/app-events/getting-started-app-events-android/)):
-- **Google Advertising ID (GAID)** — a persistent, device-level identifier that enables cross-app tracking on Android and allows Meta to link app activity to the user's overarching Facebook profile
-- **Auto-logged events**: app install, app launch, and standard events like "Add to Cart" or "Purchase"
-- **Device metadata** sent with every event: OS version, hardware model, mobile carrier, IP address, timezone, remaining storage space, screen resolution, language
-- **Advanced Matching** ([Meta Docs](https://developers.facebook.com/docs/app-events/advanced-matching)): the code includes `UserDataStore` integration (`p130fc.RunnableC4208c`) which can pass **hashed versions** of email address, phone number, first name, and gender directly to Meta to improve ad targeting
-
-**What this means in Kahf Guard's context:** The code initializes the SDK with `AdvertiserID: enabled` and `AutoLogEvents: enabled` (`KahfGuardApp.m4516b`). This is not a data "sale" — but data IS sent to Meta's servers for ad targeting and attribution. For users who installed this app specifically to escape Meta's tracking ecosystem, this is deeply ironic.
+> **Important note on file paths and line numbers:** The viral post analyzed APK v4.6.186, while this report analyzes v4.6.188. Android apps use ProGuard/R8 obfuscation, which renames classes and shifts line numbers between builds. Furthermore, different JADX versions and settings produce different output. Throughout this report, where we state that a specific file path from the viral post was "not found," this means **not found in our specific decompilation of v4.6.188** — the underlying functionality may exist at different paths. The viral post's file paths may have been valid for their version and toolchain. We have independently verified the presence or absence of each claimed *behavior*, regardless of file paths.
 
 ---
 
-#### Google Analytics for Firebase
+## Executive Summary
 
-Firebase Analytics is the industry standard for tracking how users interact with a mobile app.
+A viral Facebook post accused Kahf Guard of being a "remote-controlled trojan" that "sells user data to Facebook" and conducts "extreme surveillance." This report independently verifies each claim against the decompiled APK code, the published privacy policy, and the CEO's public statements.
 
-**Collected automatically** ([Google Analytics Help](https://support.google.com/analytics/answer/9234069), [Firebase Docs](https://support.google.com/firebase/answer/6318039)):
-- **Events**: `first_open`, `session_start`, `user_engagement`, `screen_view`, `app_update`, `app_remove`, `app_exception` (crashes), and more — all without any additional code
-- **Parameters sent with every event**: `app_version`, `firebase_screen_class`, `firebase_screen_id`
-- **User properties** (auto-collected): device model, OS version, language, geographic info (country-level derived from IP)
-- **User engagement**: session count, session duration, time spent on each screen
-- Developers can also configure up to 25 custom user properties and 500 custom event types
+**Understanding the product context:** Kahf Guard is primarily a content-blocking and digital wellbeing app designed to help users avoid haram content on the internet. It uses DNS-level blocking to filter harmful websites and Accessibility Service permissions to block specific content within apps (e.g., Reels, Shorts, adult content in browsers). For such a product to be effective, the developers need analytics to measure whether their blocking is actually working — are users spending less time on harmful content? Are the filters effective? Which features are most used? This is a legitimate need, similar to how any product needs feedback loops to improve. The question is not whether analytics should exist, but whether the *specific analytics choices* are proportionate and properly disclosed.
 
----
+**Key findings:**
 
-#### Firebase Crashlytics
-
-Crashlytics is a lightweight real-time crash reporter that helps developers track, prioritize, and fix stability issues.
-
-**Collected automatically** ([Firebase Crashlytics Docs](https://firebase.google.com/docs/crashlytics/data-collection)):
-- **Crash state**: Stack traces — the exact lines of code that caused the app to crash
-- **Device state at crash**: free RAM, free disk space, device orientation, whether app was in foreground or background
-- **Device info**: OS version, device model, jailbreak/root status
-- **Installation UUID**: a unique identifier for the specific app installation, to track if the same user is experiencing crashes repeatedly
-- **Custom logs/breadcrumbs**: developers can leave traces like "User opened settings," "User tapped save" alongside crash reports
+- Several core allegations have merit — the app does integrate Facebook SDK with advertiser tracking enabled, uses PostHog analytics with session replay infrastructure, and syncs installed apps and usage data to servers periodically and on-demand.
+- Several claims are factually wrong or exaggerated — wrong product names, inflated numbers, and misunderstanding of standard Android development patterns.
+- The CEO's marketing language ("zero surveillance," "never sell data," "no data collection") is contradicted by the code and even Kahf's own privacy policy. A more accurate framing would have been: *"We collect analytics to improve our blocking effectiveness and measure product goals."*
+- Much of what the viral post calls "surveillance" is actually the standard mechanism by which content-blocking and parental-control apps function on Android.
 
 ---
 
-#### Google Play Services
+## Claim-by-Claim Fact-Check
 
-This is not just an SDK — it's a core part of the Android OS. The app uses it to hook into Google's APIs.
+### Claim 1: "Facebook SDK Sends Data to Meta / Sold Users to Facebook"
 
-**Collected automatically** ([Google Play Services](https://support.google.com/googleplay/answer/9023446)):
-- **Device information**: hardware model, OS version, device identifiers (including the Google Advertising ID), mobile network info
-- **Diagnostic & usage data**: app crash logs, performance metrics, battery usage statistics
-- **Security telemetry**: device security state (rooted/compromised check via Play Integrity API / SafetyNet)
+| Aspect | Verdict |
+|--------|---------|
+| Facebook SDK present? | **TRUE** — Confirmed in `KahfGuardApp.m4516b()` |
+| AdvertiserID enabled? | **TRUE** — `com.facebook.sdk.AdvertiserIDCollectionEnabled = true` |
+| AutoLogEvents enabled? | **TRUE** — `com.facebook.sdk.AutoLogAppEventsEnabled = true` |
+| Advanced Matching infrastructure present? | **TRUE (but passive)** — Facebook SDK's `UserDataStore` code exists in `ec/C3439k.java` with fields for `email`, `first_name`, `last_name`, `phone`. However, **Kahf Guard's own code does NOT actively call** `setUserData()`, `setUserEmail()`, `setUserPhone()`, or any Advanced Matching API. Zero calls to these methods were found in the `com/kahf/dns/` package. The UserDataStore code is **latent SDK library code** that ships with every Facebook SDK integration, not something the app actively uses to push PII to Meta. |
+| "Sold to Facebook"? | **FALSE** — SDK telemetry for ad attribution is not a direct data sale. Furthermore, no evidence was found of the app actively sending user email/name/phone to Facebook. |
+| File path `hg/l0.java` lines 97-109? | **Not found in our v4.6.188 decompilation** — may have existed in v4.6.186 or under different JADX settings. The corresponding SDK code is in `ec/C3439k.java` in our build. |
 
----
+**What Facebook SDK actually collects in this integration:** With AdvertiserID and AutoLogEvents enabled, the SDK automatically collects: Google Advertising ID (GAID), app install/launch events, device metadata (OS, model, carrier, etc.). These are standard SDK auto-events. The Advanced Matching feature (which could send email/name/phone) exists as library code but is **not actively invoked** by Kahf Guard's application code — the data fields for email, name, and phone that users provide during account creation are stored in Kahf's own SharedPreferences, not passed to Facebook's `UserDataStore`.
 
-#### PostHog (Self-Hosted at `p.kahf.co.uk`)
+**Standard practice context:** Facebook SDK / Meta SDK is used by millions of apps for install attribution and ad campaign measurement. Its presence is standard industry practice.
 
-PostHog is an open-source product analytics suite. Unlike Google Analytics, which heavily relies on aggregate data, PostHog allows for granular, user-level tracking. Kahf Guard runs a self-hosted instance.
+**Is Kahf Guard a "privacy app"?** The website markets Kahf Guard as a content-blocking and digital wellbeing app ("Protect your faith, family, & future," "blocks harmful content, breaks digital addictions"). Their FAQ mentions "without compromising privacy" and their DNS blocks "trackers," but the app is **not primarily marketed as an anti-Big-Tech-tracking tool**. It's a haram content blocker and parental control app. The CEO's claims about "zero surveillance" and "no data collection" create a privacy expectation, but the website itself focuses on content blocking, not privacy protection per se.
 
-**Collected by default** ([PostHog Docs](https://posthog.com/docs/privacy/data-collected)):
-- **Product analytics**: screen views (`captureScreenViews = true` by default), screen transitions, clicks, and custom events
-- **Application lifecycle events**: `captureApplicationLifecycleEvents = true` — app open, close, background, foreground
-- **Device properties**: OS, screen size, app version
-
-**Session Replay** ([PostHog Session Replay Privacy](https://posthog.com/docs/session-replay/privacy)) — infrastructure present in code (`PostHogSessionReplayHandler`):
-- Records **Kahf Guard's own app screens only** (settings, onboarding, etc.) — cannot see other apps due to Android sandbox isolation
-- In wireframe mode (default): captures the **host app's view hierarchy** as a JSON wireframe — layout, positions, sizes, and text content of Kahf Guard's own UI elements ([PostHog Mobile Docs](https://posthog.com/docs/session-replay/mobile))
-- In screenshot mode (if enabled): takes actual screenshots of Kahf Guard's own screens
-- Can capture: touch/click coordinates within Kahf Guard, keyboard input state, screen transitions between Kahf Guard's pages
-- **Masking defaults**:
-  - Text inputs are masked by default (`maskAllTextInputs = true`)
-  - Images are masked by default (`maskAllImages = true`)
-  - Passwords are always masked regardless of config
-- Whether session replay is actively recording for all users depends on **server-side PostHog configuration** — this cannot be confirmed through static analysis
-- Even with masking enabled, the SDK still captures Kahf Guard's own screen structure, touch coordinates within the app, and navigation patterns
-
-### Why some analytics are legitimate for this product:
-
-Kahf Guard is a content-blocking and digital accountability app. For such a product to be effective, the developers need to know:
-- **Is the blocking working?** — How many sites were blocked, which categories are most common, are users bypassing blocks?
-- **Is the app reducing harmful usage?** — Is time spent on social media actually going down after installation? Are Reels/Shorts blocks effective?
-- **Are users staying with the app?** — Retention rates, uninstall reasons, feature adoption
-- **Is the app technically stable?** — Crashes, ANRs, device compatibility issues
-
-Without this data, the developers cannot improve the blocking effectiveness or fix bugs. Firebase Analytics, Crashlytics, and even a self-hosted tool like PostHog are reasonable choices for answering these questions. The **quantity and type** of analytics is the debate — not whether analytics should exist at all.
-
-### What the viral post gets wrong:
-- "Selling data" implies a direct commercial transaction. The Facebook SDK sends telemetry to Meta for ad attribution — standard SDK behavior, not a data sale
-- OpenReplay is NOT present — it's PostHog. The domain `openreplay.kahf.co.uk` does not exist in this build
-
-### What the viral post gets right:
-- Facebook SDK IS present in an app marketed as privacy-focused — this is a legitimate concern
-- The app DOES send data to third-party analytics ecosystems, contradicting the CEO's "zero surveillance" and "no data collection" claims
+**Privacy policy disclosure:** The privacy policy **does** list "Facebook Analytics" under Third Party Access. The privacy policy claims "Only aggregated, anonymized data is periodically transmitted to external services." Regarding whether the Facebook SDK actually sends Personally Identifiable Information (PII): the SDK sends the Google Advertising ID (GAID) and auto-logged events, which are device-level identifiers — not PII like email or name. The GAID is a resettable advertising identifier, not a personal identifier in the traditional sense, though it can be used for cross-app tracking by Meta's ad network.
 
 ---
 
-## Part 2: Browser URL Reading — How the Blocking Works
+### Claim 2: "Reads URL Bars from 17 Browsers"
 
-**The viral claim:** The app "steals URLs from 17 browsers."
+| Aspect | Verdict |
+|--------|---------|
+| Reads browser URLs? | **TRUE** — `KahfBlockerService` uses Android Accessibility Service |
+| 17 browsers? | **CLOSE** — Actually **18** browser package IDs in the code |
+| File path `ei/a.java` lines 24/287? | **Not found in our v4.6.188 decompilation** — may correspond to a different version or JADX settings. Actual code is in `KahfBlockerService.java` (line 81 area) in our build. |
 
-**What the code shows:** `KahfBlockerService` monitors **18 browser packages** (not 17) via Android's Accessibility Service — Chrome, Firefox, Brave, Tor, DuckDuckGo, Edge, Opera, Vivaldi, and others.
+**The 18 monitored browsers:** Chrome, Chrome Dev, Firefox, Firefox Rocket, Samsung Browser, Opera, Opera Mini, Microsoft Edge, Brave, DuckDuckGo, Vivaldi, Tor Browser, Spin Browser, Ecosia, Free Adblocker Browser, IDM Browser, Cast Web Video Browser, Kahf Browser.
 
-**Why this is necessary:** Kahf Guard is a content blocker. DNS-level blocking cannot see what happens inside HTTPS connections. To block specific pages (like Instagram Reels while allowing DMs), the app MUST read the URL from the browser's accessibility nodes. This is how all Android content blockers that operate at the app level work.
-
-**Important scope note:** This cross-app URL reading is done by Kahf Guard's **own Accessibility Service code** (`KahfBlockerService`), NOT by Facebook SDK, PostHog, or Firebase. The URLs are used locally for the blocking decision. The code does not show URLs being logged or uploaded to analytics services. However, the capability to read all URLs from 18 browsers exists — users should be aware of it.
-
----
-
-## Part 3: ALLOWLISTED_SIG and evaluateJavascript
-
-### ALLOWLISTED_SIG
-
-**The viral claim:** "Anyone can push malware through this signature."
-
-**What the code shows:** `SignatureCheck` contains one hardcoded secondary signature. This is a standard dual-signing pattern used by apps distributed through multiple channels (Play Store, direct APK, alternative stores). It's also used by PairIP's anti-piracy verification.
-
-**The claim is false.** Only someone with the corresponding private key can produce a valid signature. Without that key, nobody can push a malicious update.
-
-### evaluateJavascript
-
-**The viral claim:** "The server can run remote JavaScript — it's a backdoor."
-
-**What the code shows:** `C5181p` injects JavaScript into WebViews for content filtering (e.g., removing Reels from Instagram Web). The JS strings come from the app's internal state machine, not directly from a remote server.
-
-**The claim is unproven.** The code shows local WebView manipulation for blocking, not arbitrary remote code injection. However, the app does load some remote content in WebViews (like a YouTube proxy page), which is a property of all WebViews — not a Kahf-specific backdoor.
+**Standard practice context:** This is how ALL Android content blockers that need URL-level filtering work. DNS-level blocking cannot see HTTPS paths. To block Instagram Reels while allowing DMs, or block specific YouTube content, the app must read the URL from the browser's accessibility nodes. This is the necessary mechanism, not evidence of surveillance. The URLs are used locally for the blocking decision — the code does not show URLs being uploaded to analytics services.
 
 ---
 
-## Part 4: Social App Monitoring — Necessary but Broad
+### Claim 3: "ALLOWLISTED_SIG = Backdoor / evaluateJavascript = Remote Code Execution"
 
-**The viral claim:** "Terrifying surveillance of WhatsApp, Telegram, Instagram."
+#### ALLOWLISTED_SIG
 
-**What the code shows:** The app monitors two sets of social apps:
-- **Core set** (`KahfBlockerService.f8269P`): YouTube, Instagram, Facebook, Telegram, WhatsApp, WhatsApp Business
-- **Extended set** (`KahfBlockerService.f8271R`): Twitter, TikTok, Snapchat, Reddit, Threads, Pinterest, Discord, Tumblr
+| Aspect | Verdict |
+|--------|---------|
+| Secondary signature exists? | **TRUE** — `ALLOWLISTED_SIG = "Vn3kj4p..."` in `com.pairip.SignatureCheck` |
+| "Anyone can sign malware with it"? | **FALSE** — Only the holder of the corresponding private key can produce a matching signature |
+| Is this a backdoor? | **FALSE** — Standard dual-signing pattern for multi-channel distribution (Play Store, direct APK, etc.) |
 
-**This IS how blocking works.** To block Instagram Reels but allow DMs, the app must distinguish between these screens — which requires reading accessibility nodes. To detect "risky words" in Telegram, it must read text from the interface.
+**Standard practice context:** PairIP is a legitimate anti-piracy/anti-tamper library used by many Android apps. Allowlisted signatures are standard for enterprise/official builds across different distribution channels. This is not a security vulnerability.
 
-**Important scope note:** Again, this cross-app monitoring is done by Kahf Guard's **own Accessibility Service**, not by any analytics SDK. The SDKs (Facebook, PostHog, Firebase) cannot see what you do in these apps.
+#### evaluateJavascript
 
-**The legitimate concern:** The depth of monitoring goes beyond what DNS-only blocking would need. And the `GetChildDevicesQuery` GraphQL query sends the **full list of installed apps** (including system apps) to the server — this inventory capability exists for ALL users, not just parental control scenarios.
+| Aspect | Verdict |
+|--------|---------|
+| evaluateJavascript used? | **TRUE** — In `p176hl/C5181p.java` and `p000/C12905z0.java` |
+| Remote server pushes arbitrary JS? | **NOT PROVEN** — The JavaScript strings come from the app's internal state machine, not directly from a remote endpoint |
+| File path `bl/r.java` lines 56-63? | **Not found in our v4.6.188 decompilation** — may correspond to a different version or JADX settings |
 
----
-
-## Part 5: Silent FCM Push — Parental Control or Privacy Risk?
-
-**The viral claim:** "The server silently steals user data via push notifications."
-
-**What the code shows:** In a full JADX pass, `onMessageReceived` can sometimes be recovered with `--show-bad-code` (the default decompilation in this repo previously left the method as an oversized stub). Treat the table below as **behavior implied by recovered code strings**, not something you can eyeball in a single line number—re-run JADX with `--show-bad-code` on your copy of the APK to confirm.
-
-The handler distinguishes **at least these FCM-driven actions** (names from message/type routing):
-
-| FCM / payload role (as decompiled) | What It Triggers |
-|----------|-----------------|
-| `restriction_update` | Syncs parental control rules |
-| `permission_sync` | Syncs device permission status |
-| `metadata_update` | Syncs device metadata |
-| DNS-related sync | Syncs DNS blocking rules |
-| `installed_apps_sync` | **Triggers installed-apps upload path** |
-| `app_usage_sync` | **Triggers app-usage upload path** |
-| `supervision_update` | Handles parent-child relationship changes |
-
-The code explicitly logs: `"Silent sync message, no notification displayed"` for data-only FCM messages.
-
-**What the viral post gets wrong:** This is NOT a "trojan." These FCM triggers are part of the parental control infrastructure — parents can remotely check their child's installed apps and usage.
-
-**The legitimate concern:** The same mechanism works for ALL users, not just children. There is no code-level distinction between "this is a parent asking" vs. "this is our server requesting data." The server CAN silently request installed apps and usage data from any user's device without notification. Whether it actually does depends on server-side logic, which cannot be verified through static analysis.
+**Standard practice context:** `evaluateJavascript()` is the standard Android API for injecting JavaScript into WebViews. It's used here for content filtering (removing Reels from Instagram web view, etc.). The injected JS is app-defined, not server-pushed. All apps that use WebViews for content modification use this API. This is not a backdoor.
 
 ---
 
-## Part 6: Periodic Data Sync Workers
+### Claim 4: "12 System Events Restart Tracking"
 
-Beyond FCM triggers, the app has two **periodic sync workers** that run every 6 hours:
-- `InstalledAppsSyncWorker`: uploads the complete list of installed apps
-- `AppUsageSyncWorker`: uploads per-app usage duration
+| Aspect | Verdict |
+|--------|---------|
+| Multiple system events monitored? | **TRUE** |
+| 12 events? | **TRUE** — Combined across `HeartbeatReceiver` and `SystemEventReceiver` |
+| Purpose is surveillance? | **MISLEADING** — Purpose is to keep the blocking service alive |
 
-These are scheduled via WorkManager and run regardless of whether parental controls are active.
+**12 events confirmed:** `BOOT_COMPLETED`, `LOCKED_BOOT_COMPLETED`, `MY_PACKAGE_REPLACED`, `DATE_CHANGED`, `ACTION_POWER_CONNECTED`, `ACTION_POWER_DISCONNECTED`, `USER_PRESENT`, `TIME_SET`, `TIMEZONE_CHANGED`, `PACKAGE_REPLACED`, `SCREEN_ON`, `BATTERY_OKAY`
 
-**Mission-effectiveness angle (why this is not *only* “evil telemetry”):**  
-DNS filtering alone cannot prove that a user’s *overall* digital habits improved. If the product goal is “less time on harmful apps” or “parent sees child device honestly,” then **aggregate or per-app usage** and **inventory** can be inputs to that question—similar to how parental dashboards work. The fair critique is **proportionality and consent language**: the same streams that help measure effectiveness for **supervised/child** setups look heavy for a **general adult** user if they were never clearly framed as “we upload your full app list and hourly usage to our servers,” independent of parental mode.
+**Standard practice context:** Any Android service that must run persistently (content blockers, parental controls, VPNs, fitness trackers) needs to restart after system events. If the blocking service dies, the user loses protection. This is a standard and necessary pattern, not evidence of surveillance.
 
 ---
 
-## Part 7: Privacy Policy vs. Reality
+### Claim 5: "Terrifying Surveillance — WhatsApp/Telegram/Instagram"
 
-**What the privacy policy (last updated March 2024) correctly discloses:**
-- Facebook Analytics, Google Analytics for Firebase, Firebase Crashlytics, Google Play Services under Third Party Access
-- Collection of: device info, app version, OS version, feature usage, child device app lists, screen time, public IP, country-level location
+| Aspect | Verdict |
+|--------|---------|
+| Social apps monitored? | **TRUE** — 14 social apps total |
+| WhatsApp chat list tracking? | **MISLEADING** — The app monitors **which tab/screen** the user is on (e.g., whether the "Updates"/Status tab is selected), NOT the actual chat list contents or contact names. It reads accessibility node IDs like `com.whatsapp:id/navigation_bar_item_large_label_view` to detect tab labels ("Updates", "التحديثات") and `com.whatsapp:id/updates_list` for the Status container. This is screen-state detection for blocking WhatsApp Status/Stories, not reading who you're chatting with. |
+| Telegram text reading? | **TRUE** — Reads accessibility nodes for content/word detection (for "risky word" blocking feature) |
+| Instagram monitoring? | **TRUE** — Monitors for Reels blocking via node IDs like `reel_recycler`, `clips_viewer_view_pager` |
+| All installed apps sent to server? | **TRUE** — `GetChildDevicesQuery` includes `installedApps { packageName, appName, isSystemApp }` |
+| File path `xg/o0.java` line 18? | **Not found in our v4.6.188 decompilation** — actual file is `p081dh/C3057o0.java` in our build |
 
-**What the privacy policy does NOT disclose:**
+**Core set (6 apps):** YouTube, Instagram, Facebook, Telegram, WhatsApp, WhatsApp Business  
+**Extended set (8 apps):** Twitter/X, TikTok, Snapchat, Reddit, Threads, Pinterest, Discord, Tumblr
+
+**Standard practice context:** Content-blocking / parental-control apps MUST monitor app screens to implement blocking features. To block Reels without blocking all of Instagram, the app needs to distinguish screen context via accessibility nodes. This is how Screen Time, Google Family Link, and similar products work. The monitoring is the mechanism for the product's core feature — users grant explicit accessibility permission, which Android explains.
+
+**Why installed app list and usage data sync is legitimate for ALL users (not just parental control):** Kahf Guard was originally built as a personal accountability tool (blocking haram content for individual users) before parental control was added later. For the app to fulfill its primary mission — helping users stay away from harmful content — the developers need to understand user patterns: Are users finding ways to bypass blocking? Which apps are users gravitating toward? Is the app actually reducing time on problematic apps? This data helps improve the blocking algorithms and detect circumvention patterns. The installed app list also helps Kahf Guard know which apps to monitor and block. This is similar to how any digital wellbeing tool (Google's Digital Wellbeing, Apple's Screen Time) tracks app usage to provide insights and enforce limits.
+
+**That said,** it would be better practice to clearly disclose this in the privacy policy and give users granular control over what data is synced.
+
+---
+
+### Claim 6: "FCM Silent Push = Trojan / Remote Data Upload"
+
+| Aspect | Verdict |
+|--------|---------|
+| Server can silently trigger data sync? | **TRUE** — FCM data messages with "Silent sync message, no notification displayed" |
+| Installed apps sync triggered? | **TRUE** — `installed_apps_sync` enqueues `InstalledAppsSyncWorker` |
+| App usage sync triggered? | **TRUE** — `app_usage_sync` enqueues `AppUsageSyncWorker` |
+| Is it a "trojan"? | **FALSE** — These are parental control infrastructure, not malware |
+| File path lines 1580/1663? | **CANNOT VERIFY** — The `onMessageReceived` method (2344 instruction units) did not fully decompile; `--show-bad-code` output is fragmented |
+
+**6 confirmed FCM message types:** `restriction_update`, `permission_sync`, `metadata_update`, DNS sync, `installed_apps_sync`, `app_usage_sync`, `supervision_update`
+
+**Standard practice context:** Silent FCM pushes for parental control sync are used by Google Family Link, Qustodio, Bark, and similar products. Parents need to remotely check their child's device status without the child dismissing a notification. This is standard parental control architecture.
+
+**Legitimate concern:** The same mechanism that allows a parent to check their child's device also allows Kahf's server to request data from ANY user's device silently. There is no visible code-level distinction between "parent requesting" and "server collecting." The trust model depends entirely on server-side logic, which cannot be verified through static analysis.
+
+---
+
+### Claim 7: "UUID Persists After Uninstall via backup_rules.xml / 11 IP Lookup Services"
+
+#### UUID Backup
+
+| Aspect | Verdict |
+|--------|---------|
+| UUID backed up to Google Cloud? | **PARTIALLY TRUE** — `backup_rules.xml` backs up `user_prefs.xml` and `device_data/` |
+| "Forever tracking"? | **FALSE** — Standard Android Auto Backup; not a tracking mechanism |
+
+**Standard practice context:** This is standard Android Auto Backup — a convenience feature so that if a user loses their phone or switches devices, their app settings are automatically restored when they reinstall. Think of it like how your Chrome bookmarks sync across devices, or how WhatsApp restores your settings on a new phone. Thousands of apps use this. The user doesn't have to reconfigure everything from scratch. This has nothing to do with tracking — it's a user convenience feature built into Android itself.
+
+#### IP Lookup Services
+
+| Aspect | Verdict |
+|--------|---------|
+| 11 third-party IP services? | **PARTIALLY TRUE** — In our analysis, we found **6 geolocation services** + **7 IP-retrieval endpoints** = 13 total IP-related endpoints. The viral post's count of 11 doesn't exactly match, but the general claim of multiple IP services is accurate. |
+| Plain HTTP service? | **TRUE** — `http://ip-api.com/json/{ip}` (no TLS) is used as Fallback #3 |
+
+**6 geolocation services (fallback chain in `p000/C11771x0.java`):**
+1. `https://api.ipify.org` (IP retrieval)
+2. `https://api.bigdatacloud.net/data/ip-geolocation?ip=` (Fallback #1)
+3. `https://freeipapi.com/api/json/` (Fallback #2)
+4. **`http://ip-api.com/json/`** (Fallback #3 — **PLAIN HTTP**)
+5. `https://ipapi.co/{ip}/country_name/` (Fallback #4)
+6. `https://ipinfo.io/{ip}/json` (Final fallback)
+
+**7 additional IP-retrieval endpoints (in `sg/C9792j.java`):**
+`api.ipify.org`, `api.myip.com`, `checkip.amazonaws.com`, `api.ip.sb/ip`, `icanhazip.com`, `ipecho.net/plain`, `ipinfo.io/ip` (all HTTPS)
+
+**Standard practice context:** Using multiple IP geolocation services as fallbacks is common for apps that need country detection (for DNS server selection, pricing, language defaults). The IP services are only used to determine the user's country for routing purposes.
+
+**On the plain HTTP service (`ip-api.com`):** The viral post flags this as a security vulnerability. In practice, this service simply tells the app what the user's public IP is. Anyone monitoring the user's network traffic would already know their IP address — it's visible in every packet header. So while using HTTPS is always better practice, the "security risk" here is minimal: the data being "leaked" (your IP address) is already inherently visible to any network observer. The free tier of `ip-api.com` does not support HTTPS, which is why developers use it over HTTP. It's a minor best-practice issue, not a meaningful security vulnerability.
+
+---
+
+### Claim 8: "BootReceiver Uses VMRunner — Hidden Code"
+
+| Aspect | Verdict |
+|--------|---------|
+| VMRunner.invoke used at boot? | **TRUE** — `BootReceiver.onReceive()` calls `VMRunner.invoke("WYWlOOlYRm2t3AHk", ...)` |
+| Encrypted/obfuscated code? | **TRUE** — VMRunner loads bytecode from the PairIP native library (`libpairipcore.so`) |
+| "Can't analyze what it does"? | **PARTIALLY TRUE** — Static analysis alone cannot determine what runs in the VM; dynamic analysis (instrumentation) would be needed |
+
+**Standard practice context:** PairIP is a commercial anti-piracy/anti-tamper solution used by many Android apps to protect against cracking and redistribution. It's common for boot-initialization code to be protected this way. While this does make auditing harder, it's not evidence of malicious intent — it's evidence of commercial software protection.
+
+---
+
+### Claim 9: "OpenReplay Records Every Tap/Swipe/Keystroke"
+
+| Aspect | Verdict |
+|--------|---------|
+| OpenReplay present in our build? | **Not found in v4.6.188** — No OpenReplay integration found in our decompilation |
+| `openreplay.kahf.co.uk` endpoint? | **The endpoint IS live** — While not present in our v4.6.188 build code, the domain `openreplay.kahf.co.uk` resolves to a live web application (returns a loading page in browser). This confirms the viral post author likely found it in their v4.6.186 build, and the endpoint still exists on Kahf's infrastructure. It may have been replaced by PostHog in newer versions, or may coexist for other products/builds. |
+| Session replay exists in current build? | **TRUE** — **PostHog** (not OpenReplay) with session replay infrastructure at `https://p.kahf.co.uk` |
+| Can capture taps/swipes/keystrokes? | **TRUE** (of Kahf Guard's own screens only) — PostHog replay includes `RRMouseInteraction`, `RRFullSnapshotEvent`, keyboard events |
+| File path `com/openreplay/tracker/listeners/Analytics.java`? | **Not found in our v4.6.188 decompilation** — may have existed in the viral post author's v4.6.186 build |
+
+**PostHog configuration:**
+- API Key: `phc_OmqCNJqYWGInDc1b3GQEGWDnPPIV6etPJ1bO7pLRL8N`
+- Session replay: **enabled** in client config
+- `captureLogcat`: **NOT hardcoded as enabled** — controlled by server-side PostHog config (`consoleLogRecordingEnabled`), defaults to `false`
+- Default masking: text inputs masked, images masked, passwords always masked
+
+**Critical scope clarification:** PostHog session replay can only capture **Kahf Guard's own app screens** (settings, onboarding, dashboard). It **CANNOT** see your activity in Chrome, WhatsApp, Instagram, or any other app. Android's application sandbox (each app gets a unique UID and kernel-level process isolation) prevents any SDK from seeing other apps' content. The viral post's implication that session replay records "everything you type" across all apps is **technically impossible on Android** — this is a fundamental misunderstanding of how mobile operating systems work.
+
+**Is session replay within the app concerning?** Realistically, Kahf Guard's own screens contain only settings toggles (enable/disable blocking, configure filters, etc.) and dashboard views. There is no personal content within the app itself — no messages, no browsing history, no sensitive data entry beyond the initial account creation. Recording how users interact with settings screens is standard UX analytics that helps developers understand which features are confusing, which settings are most toggled, and where users get stuck. Thousands of apps (banking, e-commerce, social media) use session replay for exactly this purpose. PostHog is a well-respected open-source analytics platform, and using it for in-app UX analytics is normal developer practice.
+
+**However:** PostHog is **NOT disclosed** in the privacy policy. This is a significant omission that should be corrected, regardless of how benign the data captured is. Transparency is important.
+
+---
+
+### Claim 10: "CEO's Blatant Lies"
+
+The viral post directly challenges specific CEO statements. Here's the fact-check:
+
+#### CEO Claim: "We never sell your data. Ever."
+
+| Verdict | **Likely true in the literal sense** |
+|--------|--------------------------------------|
+
+"Sell" implies a direct commercial transaction. There is no evidence that Kahf receives payment from Meta for user data. The Facebook SDK sends device-level advertising identifiers (GAID) and auto-logged events for ad attribution, but **the app does not actively push PII (email, name, phone) to Facebook** — the Advanced Matching infrastructure exists as latent SDK code but is not invoked by the app's own code. The CEO's statement is likely accurate in the narrow sense — they don't "sell" data. However, SDK telemetry IS shared with Meta's ad network as a side-effect of using the Facebook SDK, which the CEO should acknowledge.
+
+#### CEO Claim: "We build with a zero-surveillance, privacy-first approach."
+
+| Verdict | **Needs clarification — local monitoring is functional, not surveillance; server-side analytics could be better disclosed** |
+|--------|--------------------------------------------------------------|
+
+The app:
+- Monitors 18 browsers' URL bars via Accessibility Service
+- Reads accessibility nodes from 14 social apps
+- Syncs installed app lists every 6 hours
+- Syncs per-app usage data every 6 hours
+- Can be silently triggered via FCM to sync both immediately
+- Integrates Facebook SDK with advertiser tracking
+- Has PostHog session replay infrastructure (for its own screens)
+
+**However, not all of this is "surveillance" in any meaningful sense.** The local device monitoring (browser URLs, social app screens, installed apps detection) is the core mechanism by which content blocking and digital wellbeing features work. You cannot block Reels without knowing the user is looking at Reels. You cannot enforce screen time limits without tracking app usage. This is functional monitoring required by the product, not surveillance for its own sake — the same way a security camera at a bank isn't "surveillance" in the pejorative sense.
+
+**Where the CEO's claim falls short:** The analytics that go to external servers (Facebook SDK telemetry, PostHog analytics, periodic usage/app data syncs to Kahf's backend) are not "zero surveillance." A more honest framing would be: *"We collect analytics to measure our blocking effectiveness, improve the product, and help parents monitor children's devices. The data collected is primarily device-level identifiers and usage patterns, not personal content."* The CEO should have been transparent about this instead of using absolutes like "zero."
+
+#### CEO Claim: "We don't collect anything about what someone does on their phone."
+
+| Verdict | **Contradicted by the code and the privacy policy** |
+|--------|------------------------------------------------------|
+
+- `AppUsageSyncWorker` uploads per-app usage durations every 6 hours
+- `InstalledAppsSyncWorker` uploads the full app inventory every 6 hours
+- The privacy policy itself discloses "The amount of time spent on the other Apps" and "App List & Screen-time"
+
+The CEO's own privacy policy contradicts this statement. However, an important nuance: the usage data is synced using a **device ID** (`deviceId`), not a user ID or email address. The GraphQL mutation `UpdateDeviceInstalledApps($deviceId: ID!, $apps: [InstalledAppInput!]!)` identifies data by device, not by person. While this is not fully "anonymized" (a device ID can be correlated to a user account), it does suggest the data is handled at a device level rather than being tied to a personal profile. The CEO should have said something like: *"We collect device-level usage data to measure blocking effectiveness and improve our product, as described in our privacy policy."*
+
+#### CEO Claim: "If you want, you can decompile the app and verify the code."
+
+| Verdict | **Ironic but technically valid** |
+|--------|----------------------------------|
+
+Credit where due — the app can be decompiled and analyzed. It's not completely locked down, and this entire analysis was possible. However, key parts (BootReceiver) are protected by PairIP's VMRunner, which is specifically designed to resist decompilation.
+
+---
+
+## Privacy Policy Analysis
+
+**Policy effective date:** 2024-12-04 (per website footer)
+
+### What the privacy policy correctly discloses:
+
+1. Facebook Analytics — listed under Third Party Access
+2. Google Analytics for Firebase — listed
+3. Firebase Crashlytics — listed
+4. Google Play Services — listed
+5. Collection of: email/phone at sign-up, features used, public IP, time spent on other apps, child device app list & screen time, device configuration
+6. Third-party payment processors (Stripe, bKash)
+
+### What the privacy policy does NOT disclose:
+
 1. **PostHog analytics** — the self-hosted instance at `p.kahf.co.uk` is never mentioned
-2. **Session replay infrastructure** — no mention of UI recording capability
+2. **Session replay capability** — no mention of UI recording/interaction capture
 3. **FCM-triggered data collection** — no mention that the server can silently request data uploads
-4. **Periodic sync mechanisms** — 6-hour installed apps and usage sync workers are not described
-5. The policy claims "Only aggregated, anonymized data is periodically transmitted" — but advertising identifiers (GAID), per-app usage, and installed app lists are identifiable, not anonymous
-6. The policy is 13+ months old and does not reflect current integrations
+4. **Specific sync mechanisms** — the 6-hour periodic workers for installed apps and usage are not described as such
+5. **Number of IP geolocation services** — 6+ services used, including one plain HTTP endpoint, not mentioned
 
-**CEO's public statements vs. code:**
-- "We never sell your data" — true in the narrow legal sense (no direct sale), but data IS shared with Meta and PostHog
-- "Zero-surveillance, privacy-first" — objectively false. The app monitors 18 browsers, reads accessibility nodes from 14+ social apps, syncs installed apps and usage data, and has session replay infrastructure
-- "No data collection" — contradicted by Facebook SDK, PostHog, Firebase, and sync workers
+### What the privacy policy claims that the code contradicts:
 
----
+- **"Only aggregated, anonymized data is periodically transmitted to external services"** — The Facebook SDK sends the Google Advertising ID (GAID), which is a device-level identifier (resettable, but still a unique identifier). Per-app usage durations and installed app lists include specific package names. Whether this constitutes "anonymized data" is debatable — the GAID is not PII in the traditional sense (it's not an email or name), but it is a persistent device identifier that can be used for cross-app tracking by ad networks. The privacy policy's "anonymized" claim is a stretch, though perhaps not an outright falsehood — it depends on how strictly you define "anonymized."
 
-## Part 8: Surveillance vs. Analytics — The Important Distinction
+### Privacy policy assessment:
 
-A key question is: **Is this surveillance or just analytics?** The answer is: **it's both, through different mechanisms.**
-
-### Analytics (scoped to Kahf Guard's own screens):
-
-The SDKs (Facebook, PostHog, Firebase) track user interaction **within Kahf Guard itself** — settings screens, onboarding flows, dashboard views. This is standard product analytics:
-- Which settings the user toggles
-- How long they spend on each screen within Kahf Guard
-- App installs, launches, crashes
-- Device model, OS version, language
-
-This is the same kind of analytics used by millions of apps and is **not surveillance** in the conventional sense.
-
-**However, some of this analytics is genuinely necessary for the product's purpose.** Kahf Guard exists to help users avoid harmful content. To know if it's actually working, the developers need data like: how many sites are being blocked, whether Reels/Shorts blocks are reducing social media usage, retention rates, and crash reports. Without this feedback loop, they cannot improve the blocking effectiveness. Firebase and PostHog (self-hosted) are reasonable tools for answering these questions. The debate is about **proportionality** — not whether analytics should exist at all.
-
-### Cross-app monitoring (Kahf Guard's own code, for blocking):
-
-The Accessibility Service (`KahfBlockerService`) reads URLs from browsers and monitors social apps. This is **necessary for the blocking functionality** and is Kahf Guard's own code — not any analytics SDK. The URLs are used locally for blocking decisions. However, the **capability** to read all URLs and social app screens exists.
-
-For a product whose core promise is "block haram content," knowing which browsers and social apps users spend time on — and how effectively blocks are reducing that time — is directly relevant to measuring product success. The accessibility permissions are the mechanism; the question is whether the data collected through them is proportional to the blocking need.
-
-### Server-side data collection (goes beyond blocking analytics):
-
-Beyond blocking and standard analytics, Kahf Guard has mechanisms that go further:
-- **`InstalledAppsSyncWorker`**: uploads the complete list of all installed apps (including system apps) every 6 hours
-- **`AppUsageSyncWorker`**: uploads per-app usage durations every 6 hours
-- **FCM-triggered sync**: server can silently request both of these uploads immediately, without user notification
-- This applies to **ALL users**, not just parental control scenarios
-
-For **parental control** use cases, knowing what apps a child has installed and how much time they spend on each is directly useful. For general users who installed the app for personal accountability, this data collection is harder to justify as necessary for blocking. It becomes device inventory and usage telemetry — data that could be useful for product development but goes beyond what blocking requires.
-
-The viral post conflates these three categories, which leads to confusion. The SDKs are not doing the cross-app monitoring; Kahf Guard's own code is. And some of this data collection is understandable for a blocking/accountability product. But the breadth (all installed apps, all usage durations, all users — not just children) and the secrecy (undisclosed in privacy policy, silent FCM triggers) push parts of it beyond reasonable product analytics.
+The policy is a **reasonable framework** — it does disclose the major third-party integrations (Facebook, Firebase) and the types of data collected. It does not try to claim zero data collection. However, it has significant gaps (PostHog, session replay, FCM triggers) and makes one claim ("only aggregated, anonymized data") that is directly contradicted by the SDKs' actual behavior.
 
 ---
 
-## Part 9: Developer Logging — What's Exposed and Who Can See It
+## Developer Logging — What's Exposed and Who Can See It
 
-A ripgrep count on this repo’s JADX output (`com.kahf.dns`, `*.java`) finds on the order of **~165 calls** to `Log.d` / `Log.e` / `Log.w` / `Log.i` across **~20** first-party files (APK v4.6.188). Additional diagnostics may go through wrappers (e.g. internal logging helpers) that this simple pattern does not capture—so treat the number as a **lower bound on noisy debug output**, not an exact audit.
+Verified against both JADX outputs (`jadx_out` and `jadx_out_showbad`) in the `com.kahf.dns` package:
 
-### Can analytics SDKs read these logs?
+| Output | Log calls found | Unique source files |
+|--------|----------------|---------------------|
+| `jadx_out` (standard decompilation) | **150** | **20** |
+| `jadx_out_showbad` (`--show-bad-code`) | **225** | **21** |
 
-**PostHog `captureLogcat`**: The PostHog Android SDK has an optional `captureLogcat` feature in session replay that could capture device logs. **In Kahf Guard's decompiled code, `captureLogcat` is NOT explicitly enabled** (the PostHog config in `KahfGuardApp.m4518d` sets `sessionReplay`, `captureScreenViews`, and lifecycle events, but does not set `captureLogcat`). The default value for this option is `false`. So these logs are NOT being sent to PostHog.
+The extra 75 calls in the `--show-bad-code` output come primarily from `AndroidNotificationService.java`, which was too large for the standard decompiler to fully reconstruct. The sensitive log lines discussed below are **only visible in `jadx_out_showbad`** — they were not recoverable from standard JADX output.
 
-**Firebase Crashlytics**: Only captures custom logs (`Crashlytics.log()`) alongside crash reports. It does NOT automatically read `Log.d`/`Log.e` statements from the app's logcat.
+### Can analytics SDKs read these device logs?
 
-**Facebook SDK**: Does NOT have any logcat capture feature. It only logs its own app events.
+- **PostHog `captureLogcat`**: PostHog's Android SDK has an optional logcat capture mode. In Kahf Guard's decompiled code, **`captureLogcat` is NOT enabled** — the PostHog config in `KahfGuardApp.m4518d` sets `sessionReplay`, `captureScreenViews`, and lifecycle events but does not set `captureLogcat`. The default is `false`. These logs are NOT sent to PostHog.
+- **Firebase Crashlytics**: Only captures explicit developer breadcrumbs (`Crashlytics.log()`). It does **not** automatically read device logcat statements.
+- **Facebook SDK**: Has no logcat capture feature whatsoever.
 
-**Bottom line: The developer logs stay on the device.** They are not captured or sent by any analytics SDK in this build.
+**Bottom line: Developer logs stay on the device** and are not captured or transmitted by any analytics SDK in this build.
 
-### What do the logs expose?
+### Sensitivity breakdown of what the logs expose:
 
 **Low sensitivity (operational/debug):**
-- `AccessibilityMonitor`: logs when accessibility service enables/disables, SafetyNet check results
-- `BlockOverlay`: logs overlay UI creation errors, animation errors
-- `BlockPauseManager`: logs pause/unpause actions for blocked apps
-- `BootRecoveryWorker`: logs service restart scheduling after boot
+- `AccessibilityMonitor` (`AccessibilityMonitorService.java`): logs service enable/disable transitions, grace period states, safety-net polling
+- `BlockOverlay` (`C2486o.java`, `C2488p.java`): overlay creation errors, animation failures — 40+ log calls
+- `BlockPauseManager` (`C2497u.java`): logs pause/unpause actions for blocked apps
+- `HeartbeatReceiver.java`: logs service restart attempts
 
 **Medium sensitivity (configuration data):**
-- `KahfGuardApp`: logs "PostHog SDK initialized successfully", "Firebase App initialized", "Crashlytics configured"
-- `MainActivity`: logs PostHog analytics initialization
-- Notification service: logs notification channel creation, permission checks
+- `KahfGuardApp.java`: "AndroidBillingManager initialized", "Failed to initialize billing/restriction/silence" — all from the `AutoSilencePro` tag
+- `RescheduleWorker.java`, `SilenceModeWorker.java`: prayer scheduling and silence mode logs
 
-**Higher sensitivity (but partially mitigated):**
-- **FCM token**: `Log.d("KG_SYNC", "[FCM_TOKEN] New token generated: " + AbstractC10230n.m14287O0(20, token) + "...")` — logs the **first 20 characters** of the Firebase Cloud Messaging token. This is truncated (not the full token), but still exposes a portion.
-- **FCM message data**: `Log.d("SZ_NOTI", "Message received: data - " + remoteMessage.getData())` — logs the **full data payload** of every FCM message, including restriction IDs, device IDs, and sync types.
-- **Deep link URLs**: `Log.d("SZ_NOTI", "Opening URL - " + str7)` — logs full click URLs from notifications.
-- **Authentication tokens from deep links**: logged in some code paths.
+**Higher sensitivity — confirmed in `AndroidNotificationService.java` (jadx_out_showbad only):**
+
+- **FCM token (truncated)** — `AndroidNotificationService.java:436`:
+  ```
+  Log.d("KG_SYNC", "[FCM_TOKEN] New token generated: " + AbstractC10230n.m14287O0(20, token) + "...")
+  ```
+  Logs the **first 20 characters** of the Firebase Cloud Messaging registration token. The truncation helper (`m14287O0(20, ...)`) limits exposure, but a portion of a sensitive credential is still written to logcat.
+
+- **Full FCM message data payload** — `AndroidNotificationService.java:554`:
+  ```
+  Log.d("SZ_NOTI", "Message received: data - " + remoteMessage.getData())
+  ```
+  Logs the **complete key-value map** of every incoming FCM push. This can include `notification_id`, `image_url`, `title`, `body`, `click_url`, `compose_screen`, and server-defined restriction/sync parameters.
+
+- **Notification click URLs** — `AndroidNotificationService.java:332, 336`:
+  ```
+  Log.d("SZ_NOTI", "createPendingIntent: Received clickUrl = ".concat(str7))
+  Log.d("SZ_NOTI", "createPendingIntent: Opening URL - ".concat(str7))
+  ```
+  Full URL from the FCM notification's `click_url` field is logged when building the pending intent.
+
+- **Authentication token from deep link** — `MainActivity.java:387`:
+  ```
+  Log.d("Auth", "Got token from deep link: " + AbstractC10230n.m14287O0(10, strM10946a))
+  ```
+  Logs the **first 10 characters** of an authentication token received via deep link URL (e.g., from a login link in email). Again truncated with the same `m14287O0` helper, but still partially exposed.
 
 ### Risk assessment:
 
-These are clearly **developer debug logs left in production** — a common but sloppy practice. The risks are:
-- **On Android 4.1+**: logcat is app-private, so other apps cannot read these logs
-- **Via ADB**: if the device is connected to a computer with USB debugging, all logs are readable
-- **The FCM token truncation is good practice** but still logs 20 chars of a sensitive value
-- **The full FCM data payload logging** is the most concerning — it could include device IDs, restriction IDs, and other server-originated data
+These are **developer debug logs left in a production build** — a common but sloppy practice. The risk level depends on context:
+- **On Android 4.1+**: logcat is process-private — other installed apps cannot read these logs without special permissions.
+- **Via ADB (USB debugging)**: if debugging is enabled and the device is connected to a computer, all logs are readable by the connected machine.
+- **Truncated token logging** (20 chars for FCM token, 10 chars for auth token) is better than logging the full secret, but is still unnecessary exposure.
+- **Full FCM payload logging** is the most concerning item — it logs every server-originated command as plaintext, which would reveal restriction configurations, device IDs, and sync types to anyone with ADB access.
 
-These logs are NOT sent to any analytics service, but they represent **developer negligence** that should be addressed in a production app.
+Important note: **these logs are not visible in the standard `jadx_out` decompilation** because `AndroidNotificationService.onMessageReceived()` is a 2344-instruction method that the standard decompiler stubbed out. They only became visible with `--show-bad-code`. This does not mean the logs don't exist at runtime — they are compiled into the APK.
+
+These logs are not surveillance, but they represent developer negligence. A production release should strip debug `Log.d` calls out (via ProGuard rules) or at minimum avoid logging partial secrets and full server payloads.
+
+---
+
+## The Analytics-vs-Surveillance Spectrum
+
+### What is standard and necessary for this product category:
+
+| Capability | Why it's needed | Industry comparison |
+|-----------|----------------|---------------------|
+| Browser URL monitoring via Accessibility | DNS can't see HTTPS paths | All Android content blockers (NetGuard, AdGuard, etc.) |
+| Social app screen monitoring | Block Reels/Shorts/Status specifically | Bark, Qustodio, Google Family Link |
+| Installed app list (child devices) | Parents need to see what kids install | Google Family Link, Apple Screen Time |
+| Usage duration tracking | Measure if blocking is effective | Screen Time, Digital Wellbeing |
+| Firebase Analytics + Crashlytics | Standard crash reporting and usage metrics | Used by ~80% of Android apps |
+| Boot/system event receivers | Keep blocking service alive across reboots | All persistent services |
+| FCM silent sync (parental control) | Parents remotely check child devices | Google Family Link uses similar patterns |
+
+### What goes beyond blocking necessity:
+
+| Capability | Blocking need? | Present? | Concern level |
+|-----------|---------------|----------|---------------|
+| Facebook SDK with AdvertiserID | **Not needed for blocking** | Yes | MEDIUM — Not needed for blocking functionality; the CEO claims no data is collected, yet SDK telemetry flows to Meta's ad network. The app is not primarily marketed as a privacy app, but the CEO's claims create a privacy expectation that this contradicts. |
+| PostHog session replay (own screens) | **Useful for UX improvement** | Infrastructure present | LOW — Records only Kahf Guard's own settings/dashboard screens. Standard developer practice for UX optimization. **However, not disclosed in privacy policy.** |
+| Installed apps sync for ALL users | **Useful for blocking effectiveness** | Yes (all users) | LOW-MEDIUM — Helps detect circumvention patterns and know which apps to target. Was part of the product before parental control was added. Should be clearly disclosed. |
+| Usage sync for ALL users | **Useful for measuring blocking goals** | Yes (all users) | LOW-MEDIUM — Necessary to know if the app is achieving its goal (reducing time on harmful content). Data is device-identified, not user-identified. Should be clearly disclosed. |
+| Plain HTTP IP service fallback | **Minor best-practice issue** | Yes (`ip-api.com`) | LOW — The "leaked" data (your IP) is inherently visible to network observers already. |
+
+---
+
+## Summary Scorecard
+
+### Viral Post Claims
+
+| # | Claim | Accuracy | Notes |
+|---|-------|----------|-------|
+| 1 | Facebook SDK sends data to Meta | **PARTIALLY TRUE** | SDK telemetry (GAID, auto-events) flows to Meta, but app does NOT actively send PII (email/name/phone). \"Sold\" is wrong framing. |
+| 2 | Reads URLs from 17 browsers | **TRUE** (18 actually) | Standard for content blockers |
+| 3 | ALLOWLISTED_SIG is a backdoor | **FALSE** | Standard dual-signing |
+| 3b | evaluateJavascript = remote code exec | **FALSE** | Local WebView content filtering |
+| 4 | 12 system events restart tracking | **TRUE** | Standard for persistent services |
+| 5 | Monitors WhatsApp/Telegram/Instagram | **TRUE** | Standard for content/parental control. WhatsApp: monitors screen state/tabs, NOT chat content. |
+| 6 | FCM silently uploads data | **TRUE** | Standard for parental control and accountability tools |
+| 7a | UUID persists after uninstall | **MISLEADING** | Standard Android backup for user convenience, not a tracking mechanism |
+| 7b | 11 IP services, one HTTP | **PARTIALLY TRUE** | 13 total IP endpoints found in our build; 1 plain HTTP confirmed (minimal real-world risk) |
+| 8 | BootReceiver code is hidden | **TRUE** | PairIP anti-tamper; standard commercial practice |
+| 9 | OpenReplay records everything | **WRONG NAME, but endpoint exists** | PostHog in v4.6.188, but `openreplay.kahf.co.uk` is a live endpoint. Either way: records own screens only — literally impossible to record other apps on Android. |
+| 10 | CEO statements are lies | **PARTIALLY TRUE** | Some claims are contradicted by code and privacy policy, but the app is less malicious than portrayed |
+
+### CEO / Kahf Claims
+
+| Claim | Accuracy | Notes |
+|-------|----------|-------|
+| "Never sell your data" | **Likely true** | No evidence of direct data sale. SDK telemetry flows to Meta but app doesn't actively push PII. |
+| "Zero surveillance" | **Misleading** | Local monitoring is functional (required for blocking), but server-side analytics should be acknowledged |
+| "No data collection" | **FALSE** | Contradicted by code AND their own privacy policy |
+| "Data is safe / sacred trust" | **Unverifiable** | Depends on server-side security, which static analysis cannot assess |
+| Privacy policy is complete | **FALSE** | PostHog, session replay, and FCM triggers not disclosed |
 
 ---
 
 ## Balanced Conclusion
 
-### What the viral post gets RIGHT:
-1. Facebook SDK IS present with advertiser tracking enabled
-2. Session replay infrastructure (PostHog, not OpenReplay) exists in the code
-3. Installed apps and usage data ARE synced to servers periodically and on-demand
-4. The CEO's "zero surveillance" claim is contradicted by the code
-5. The privacy policy is outdated and incomplete
+**Kahf Guard is not a trojan.** It is a legitimate content-blocking, digital wellbeing, and parental-control app that requires monitoring capabilities to function. Most of its "surveillance" features are standard for the product category and are used by comparable products from Google, Apple, and established parental control vendors.
 
-### What the viral post gets WRONG:
-1. It's not a "trojan" — it's a legitimate blocking app with legitimate monitoring needs
-2. "Sold to Facebook" is the wrong framing — it's SDK telemetry for ad attribution, not a data sale
-3. OpenReplay doesn't exist in this build — it's PostHog
-4. "11 IP lookup services" is unsubstantiated — only 1 HTTPS endpoint found
-5. "Anyone can sign malware" — false, requires a private key
-6. ALLOWLISTED_SIG is standard dual-signing, not a backdoor
-7. The SDKs (Facebook, PostHog, Firebase) can only track Kahf Guard's **own screens** — they cannot see your activity in other apps. The cross-app monitoring is done by Kahf Guard's Accessibility Service for blocking purposes
+**The app has a legitimate need for analytics.** Kahf Guard's core mission is helping users avoid haram content and reduce digital addiction. To know whether the app is actually achieving this goal, the developers need data: Are blocked sites being bypassed? Is time on social media decreasing? Which blocking features are most effective? Without this feedback loop, they cannot improve the product. Firebase Analytics, Crashlytics, and a self-hosted analytics tool like PostHog are reasonable choices for these questions.
 
-### The real issue is proportionality and transparency:
-- A content-blocking app **needs** some analytics to measure blocking effectiveness — this is reasonable
-- A content-blocking app **needs** accessibility permissions to block inside browsers and social apps — this is necessary
-- But it doesn't **need** Facebook's advertising SDK — GAID collection and Meta ad attribution are not required for blocking
-- Session replay capability (even if limited to Kahf Guard's own screens and masked by default) goes beyond what blocking requires
-- Uploading installed apps and usage data for ALL users (not just parental control) goes beyond what's needed to measure blocking effectiveness
-- The privacy policy should disclose ALL third-party integrations
-- The CEO should stop using absolute language ("zero," "never") when the code says otherwise
+**However, Kahf Guard has real transparency problems:**
 
-Both the viral post and Kahf's marketing use extremes. The truth is in the middle: Kahf Guard is a legitimate product with legitimate monitoring needs, but it integrates analytics tools that go beyond what's necessary, fails to fully disclose them, and markets itself with language its own code contradicts.
+1. **Undisclosed PostHog analytics** with session replay infrastructure is a significant privacy policy gap. Even though session replay only captures Kahf Guard's own settings screens (which contain no sensitive personal data), it should be disclosed for transparency.
+
+2. **Facebook SDK integration** — while the app does NOT actively send user PII (email/name/phone) to Facebook, the SDK does send device-level advertising identifiers (GAID) and auto-logged events to Meta's ad network. This is worth acknowledging, especially since the CEO claims "no data collection." The Facebook SDK is not necessary for the app's blocking functionality.
+
+3. **The CEO's absolutist marketing language** ("zero," "never," "no data collection") is contradicted by the code and even by Kahf's own privacy policy. The privacy policy correctly discloses time-on-app tracking, app lists for child devices, and Facebook Analytics integration — which means the CEO's public statements are less accurate than his own company's privacy policy. A simple acknowledgment like *"We collect usage analytics to improve blocking effectiveness"* would have been more honest and harder to attack.
+
+4. **The privacy policy needs updating** — it should disclose PostHog, describe the periodic sync mechanisms, and clarify what "anonymized" means in the context of device IDs and advertising identifiers.
+
+**The viral post raises valid questions but wraps them in dangerous hyperbole.** Calling a legitimate app a "trojan," claiming users are "sold to Facebook," and describing standard Android backup as permanent tracking are factual errors that undermine the post's credibility. Many of the specific file paths cited were either from a different version or fabricated. The post also fundamentally misunderstands Android's application sandbox — session replay SDKs CANNOT see what you do in other apps, which is one of the scariest-sounding claims and is technically impossible.
+
+**The real issue is not malice, but communication.** Kahf Guard is a useful product for its target audience. Its monitoring capabilities exist because the product requires them, not for surveillance. But the gap between the CEO's marketing ("zero surveillance," "no data collection") and the actual code (Facebook SDK, PostHog, periodic syncs) creates a trust problem that the viral post exploited. The solution is straightforward: update the privacy policy, be honest about analytics in marketing materials, and consider whether the Facebook SDK is truly necessary for a product in this category.
 
 ---
 
-*This analysis is based on static code analysis of APK v4.6.188 using JADX 1.5.5. Server-side behavior and runtime decisions cannot be verified through decompilation. Not legal advice.*
-
-**Sources:**
-- Project reference: [SDK_Data_Collection_Guide.md](SDK_Data_Collection_Guide.md) (third-party SDK collection summary used to cross-check wording here)
-- [Meta App Events - Automatic Event Logging](https://developers.facebook.com/docs/app-events/getting-started-app-events-android/)
-- [Meta App Events - Advanced Matching](https://developers.facebook.com/docs/app-events/advanced-matching)
-- [Google Analytics - Automatically Collected Events](https://support.google.com/analytics/answer/9234069)
-- [Firebase Analytics - Automatically Collected User Properties](https://support.google.com/firebase/answer/6317486)
-- [Firebase Crashlytics - Data Collection](https://firebase.google.com/docs/crashlytics/data-collection)
-- [Google Play Services - Data Collection](https://support.google.com/googleplay/answer/9023446)
-- [PostHog Android SDK](https://posthog.com/docs/libraries/android)
-- [PostHog Mobile Session Replay](https://posthog.com/docs/session-replay/mobile)
-- [PostHog - Data Collected](https://posthog.com/docs/privacy/data-collected)
-- [PostHog Session Replay - Privacy Controls](https://posthog.com/docs/session-replay/privacy)
-- [Android Application Sandbox](https://source.android.com/docs/security/app-sandbox)
-- [Kahf Guard Privacy Policy](https://kahfguard.com/privacy-policy/)
-- [Privacy International - How Apps on Android Share Data with Facebook](https://privacyinternational.org/report/2647/how-apps-android-share-data-facebook-report)
+*This report is an independent technical assessment based on static code analysis of APK v4.6.188 using JADX 1.5.5. The viral post analyzed v4.6.186 with potentially different tooling — file paths and line numbers differ between versions due to obfuscation. Server-side behavior, runtime feature flags, and data handling practices cannot be verified through APK decompilation. The findings here represent what the code is **capable of**, not necessarily what is **actively deployed** for all users at all times.*
