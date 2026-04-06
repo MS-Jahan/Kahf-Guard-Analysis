@@ -22,6 +22,8 @@
 পুরো রিপোর্টটি একটি রেসপন্সিভ ওয়েবপেজে (**English** এবং **বাংলা** উভয় ভাষায়) পড়া যাবে। সোর্স কোডের কোন লাইন কী কাজ করছে, তার বিস্তারিত ব্যাখ্যা সেখানে দেওয়া আছে।
 
  **[Read the Full Fact-Check Report Here](report-en.md)**
+ 
+ **[HTML Version](https://kahf-guard-analysis.pages.dev/)**
 
 ## টেকনিক্যাল ডিটেইলস
 
